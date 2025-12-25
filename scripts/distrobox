@@ -36,7 +36,6 @@ if ! command -v flatpak &> /dev/null; then
 fi
 
 # Check if Distrobox home doesn't exist.
-# This is much faster than checking if Distrobox instance doesn't exist.
 if [[ ! -d $distrobox_home ]]; then
     # Check if Distrobox instance exists.
     if [[ $(distrobox list --no-color | tr -s ' ' | cut -d ' ' -f 3 | tail -n +2 | grep '^kalman_ws$' | wc -l) -ne 0 ]]; then
@@ -63,19 +62,42 @@ if [[ ! -d $distrobox_home ]]; then
     touch $distrobox_home/.sudo_as_admin_successful
 
     # Link up user Git config and SSH keys.
-    ln -s $HOME/.gitconfig $distrobox_home/.gitconfig
-    ln -s $HOME/.ssh $distrobox_home/.ssh
+    if [[ -f $HOME/.gitconfig ]]; then ln -s $HOME/.gitconfig $distrobox_home/.gitconfig; fi
+    if [[ -d $HOME/.ssh ]]; then ln -s $HOME/.ssh $distrobox_home/.ssh; fi
+
+    # --- BUILD COMMAND USING ARRAYS (Safe for WSL/Linux cross-compat) ---
+    
+    # Base command arguments
+    cmd_args=(
+        distrobox create
+        --image "docker.io/osrf/ros:$ros_distro-desktop-full"
+        --yes
+        --name kalman_ws
+        --home "$distrobox_home"
+        --additional-packages "$additional_packages"
+        --absolutely-disable-root-password-i-am-really-positively-sure
+        --init-hooks "chsh -s /usr/bin/bash $USER && (yes | sudo unminimize)"
+        --no-entry
+    )
 
     # Detect if the computer has an NVIDIA GPU.
     if [[ $(lspci | grep -i nvidia | wc -l) -ne 0 ]]; then
-        nvidia="--nvidia"
-    else
-        nvidia=""
+        cmd_args+=(--nvidia)
     fi
 
-    # Create the Distrobox.
-    
-    distrobox create --image docker.io/osrf/ros:$ros_distro-desktop-full --yes --name kalman_ws --home "$distrobox_home" --additional-packages "$additional_packages" --absolutely-disable-root-password-i-am-really-positively-sure --init-hooks "chsh -s /usr/bin/bash $USER && (yes | sudo unminimize)" $nvidia --no-entry --additional-flags "--mount type=bind,source=/dev/bus/usb,target=/dev/bus/usb" 
+    # Detect if USB bus is available (Fix for WSL crashing when no device is attached)
+    if [[ -d "/dev/bus/usb" ]]; then
+        echo "USB bus detected at /dev/bus/usb. Enabling USB mounting."
+        cmd_args+=(--additional-flags "--mount type=bind,source=/dev/bus/usb,target=/dev/bus/usb")
+    else
+        echo "WARNING: /dev/bus/usb not found (Normal on WSL without attached devices)."
+        echo "Skipping USB mount to prevent crash."
+    fi
+
+    # Execute the command array
+    "${cmd_args[@]}"
+
+    # Check result
     if [[ $? -ne 0 ]]; then
         echo "Failed to create Distrobox instance."
         rm -r .distrobox
@@ -83,7 +105,6 @@ if [[ ! -d $distrobox_home ]]; then
     fi
 
     # Copy template .bashrc
-    # This file can be edited by the user afterwards.
     cp $script_dir/distrobox-template.bashrc $distrobox_home/.bashrc
 
     # Replace "<<<ROS_DISTRO_TEMPLATE_SUBSTITUTION>>>"
