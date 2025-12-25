@@ -1,7 +1,33 @@
 #!/usr/bin/bash
 
 # This script creates a new Distrobox or enters an existing one.
+# --- WSL PODMAN FIX START ---
+# Sprawdzamy, czy jesteśmy na WSL (szukając słowa 'microsoft' w wersji kernela)
+if grep -qEi "(Microsoft|WSL)" /proc/version; then
+    echo "Wykryto środowisko WSL. Sprawdzanie konfiguracji Podmana..."
+    
+    CONF_FILE="$HOME/.config/containers/containers.conf"
+    
+    # Jeśli plik nie istnieje lub nie zawiera kluczowej konfiguracji, tworzymy go
+    if [[ ! -f "$CONF_FILE" ]] || ! grep -q "cgroupfs" "$CONF_FILE"; then
+        echo "Naprawianie konfiguracji Podmana dla WSL..."
+        mkdir -p "$(dirname "$CONF_FILE")"
+        
+        cat <<EOF > "$CONF_FILE"
+[containers]
+log_driver = "k8s-file"
+pids_limit = 0
 
+[engine]
+cgroup_manager = "cgroupfs"
+events_logger = "file"
+EOF
+        echo "Konfiguracja Podmana zaktualizowana. Wymagany restart WSL."
+        echo "Proszę wykonaj 'wsl --shutdown' w PowerShell i uruchom skrypt ponownie."
+        exit 1
+    fi
+fi
+# --- WSL PODMAN FIX END ---
 ros_distro=humble
 additional_packages="iputils-ping nano vim alsa-utils alsa pulseaudio git git-man python3 python-is-python3 python3-pip usbutils"
 if [[ $ros_distro != "humble" ]]; then
