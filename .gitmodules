@@ -1,0 +1,3 @@
+[submodule "src/Web_Speech_remote_control"]
+	path = src/Web_Speech_remote_control
+	url = git@github.com:bafaurazan/Web_Speech_remote_control.git
