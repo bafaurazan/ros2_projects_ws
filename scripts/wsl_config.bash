@@ -33,6 +33,7 @@ fi
 cat <<EOF > "$WSL_CONFIG_PATH"
 [wsl2]
 swap=17GB
+networkingMode=mirrored
 EOF
 
 echo "✅ Sukces! Ustawiono SWAP."
