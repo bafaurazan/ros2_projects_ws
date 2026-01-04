@@ -5,6 +5,7 @@ import json
 import glob
 import sys
 import time
+import stat
 
 # --- Funkcje pomocnicze ---
 
@@ -21,7 +22,6 @@ def copy_if_updated(from_dir: str, to_dir: str):
         return
     
     if not os.path.exists(from_dir):
-        # log(f"Pominięto: źródło nie istnieje -> {from_dir}")
         return
 
     # Ostrzeżenie przy dużych katalogach
@@ -38,12 +38,7 @@ def copy_if_updated(from_dir: str, to_dir: str):
             if not os.listdir(to_dir):
                 shutil.copytree(from_dir, to_dir, dirs_exist_ok=True)
             else:
-                # Rekurencyjne sprawdzanie dat (wolniejsze, ale dokładne)
-                from_mtime = os.path.getmtime(from_dir)
-                to_mtime = os.path.getmtime(to_dir)
-                
-                # Prosta heurystyka: jeśli folder źródłowy jest nowszy, wchodzimy głębiej
-                # (Dla bezpieczeństwa sprawdzamy zawartość)
+                # Rekurencyjne sprawdzanie dat
                 for item in os.listdir(from_dir):
                     item_from = os.path.join(from_dir, item)
                     item_to = os.path.join(to_dir, item)
@@ -69,10 +64,8 @@ def elem(arr, index, default=None):
 
 # --- Główna konfiguracja ---
 
-# Ustalanie ścieżki do workspace (zakładamy, że skrypt jest w folderze wewnątrz workspace)
-# Idziemy dwa piętra w górę (np. z ros2_ws/scripts/config.py -> ros2_ws)
 current_dir = os.path.dirname(os.path.abspath(__file__))
-# Jeśli skrypt leży bezpośrednio w workspace, zmień '..' na '.'
+# Zakładamy strukturę: workspace/scripts/ten_skrypt.py -> workspace
 ws_dir = os.path.abspath(os.path.join(current_dir, "..")) 
 
 log(f"Workspace directory: {ws_dir}")
@@ -80,7 +73,6 @@ log(f"Workspace directory: {ws_dir}")
 config_path = os.path.join(ws_dir, ".vscode/settings.json")
 compile_commands_path = os.path.join(ws_dir, "build/compile_commands.json")
 
-# Ścieżki docelowe na hoście (w katalogu domowym użytkownika)
 home_dir = os.path.expanduser("~")
 site_dir = os.path.join(home_dir, ".vscode-paths/ros2-site-packages")
 dist_dir = os.path.join(home_dir, ".vscode-paths/ros2-dist-packages")
@@ -94,19 +86,16 @@ running_distrobox = "DISTROBOX_HOST_HOME" in os.environ or os.path.exists("/run/
 if running_distrobox:
     log("Wykryto środowisko Distrobox/Kontener.")
     
-    # Kopiowanie bibliotek Pythona ROS
     log("Kopiowanie site-packages ROSa...")
     copy_if_updated(elem(glob.glob("/opt/ros/*/lib/python*/site-packages"), 0), site_dir)
     copy_if_updated(elem(glob.glob("/opt/ros/*/local/lib/python*/dist-packages"), 0), dist_dir)
     
-    # Kopiowanie nagłówków C++
     log("Kopiowanie nagłówków ROSa...")
     copy_if_updated(elem(glob.glob("/opt/ros/*/include"), 0), include_dir)
     
-    # Kopiowanie systemowych nagłówków (/usr/include) - to trwa najdłużej
+    log("Kopiowanie systemowych nagłówków (/usr/include)...")
     copy_if_updated("/usr/include", usr_include_dir)
 
-    # Kopiowanie systemowych pakietów Pythona
     log("Kopiowanie bibliotek systemowych Pythona...")
     for python_dir in glob.glob("/usr/lib/python*/dist-packages"):
         python_name = os.path.basename(os.path.dirname(python_dir))
@@ -135,18 +124,17 @@ if os.path.isfile(config_path):
 else:
     config = {}
 
-# Konfiguracja terminala
 distrobox_script_path = os.path.join(ws_dir, "scripts/distrobox")
 
 if running_distrobox:
-    # Sprawdź czy skrypt startowy istnieje, żeby nie zepsuć terminala
     if os.path.isfile(distrobox_script_path):
         config["terminal.integrated.profiles.linux"] = {
             "kalman_ws": {"path": distrobox_script_path}
         }
         config["terminal.integrated.defaultProfile.linux"] = "kalman_ws"
     else:
-        log(f"UWAGA: Nie znaleziono skryptu {distrobox_script_path}. Terminal VS Code pozostanie domyślny.")
+        # Fallback if specific script not found
+        pass
 else:
     bashrc_path = os.path.join(ws_dir, "scripts/native-ubuntu.bashrc")
     if os.path.isfile(bashrc_path):
@@ -158,7 +146,6 @@ else:
         }
         config["terminal.integrated.defaultProfile.linux"] = "kalman_ws"
 
-# Ścieżki autocomplete
 if running_distrobox:
     config["python.autoComplete.extraPaths"] = [site_dir, dist_dir] + usr_lib_python_dirs
     config["C_Cpp.default.includePath"] = [include_dir + "/**", usr_include_dir + "/**"]
@@ -166,25 +153,21 @@ else:
     config["python.autoComplete.extraPaths"] = []
     config["C_Cpp.default.includePath"] = []
 
-# Dodawanie zainstalowanych pakietów z workspace (install/)
 install_dir = os.path.join(ws_dir, "install")
 if os.path.isdir(install_dir):
     for item in os.listdir(install_dir):
         item_dir = os.path.join(install_dir, item)
         if os.path.isdir(item_dir):
-            # Python paths
             for sp in glob.glob(os.path.join(item_dir, "lib", "python*", "site-packages")) + \
                       glob.glob(os.path.join(item_dir, "local", "lib", "python*", "dist-packages")):
                 if sp not in config["python.autoComplete.extraPaths"]:
                     config["python.autoComplete.extraPaths"].append(sp)
             
-            # C++ paths
             for inc in glob.glob(os.path.join(item_dir, "include")):
                 inc_path = inc + "/**"
                 if inc_path not in config["C_Cpp.default.includePath"]:
                     config["C_Cpp.default.includePath"].append(inc_path)
 
-# Dodatkowe ścieżki hosta (gdy działamy w Distrobox)
 if running_distrobox:
     host_local_lib = os.path.expanduser("~/.local/lib/python*/")
     for sp in glob.glob(os.path.join(host_local_lib, "site-packages")) + \
@@ -192,14 +175,12 @@ if running_distrobox:
         if sp not in config["python.autoComplete.extraPaths"]:
             config["python.autoComplete.extraPaths"].append(sp)
 
-    # --- Aktualizacja compile_commands.json ---
     if os.path.isfile(compile_commands_path):
         log("Aktualizacja compile_commands.json...")
         try:
             with open(compile_commands_path, "r", encoding="UTF-8") as f:
                 compile_commands = f.read()
             
-            # Zamiana ścieżek
             for ros_include_dir in glob.glob("/opt/ros/*/include"):
                 compile_commands = compile_commands.replace(ros_include_dir, include_dir)
             
@@ -209,7 +190,6 @@ if running_distrobox:
             extra_includes = f"-isystem {usr_include_dir} -isystem {os.path.join(usr_include_dir, 'x86_64-linux-gnu')}"
             
             if extra_includes not in compile_commands:
-                # Dodajemy flagi tylko raz
                 compile_commands = compile_commands.replace("-O", f"{extra_includes} -O")
 
             with open(compile_commands_path, "w", encoding="UTF-8") as f:
@@ -217,7 +197,6 @@ if running_distrobox:
         except Exception as e:
             log(f"Błąd przy edycji compile_commands.json: {e}")
 
-# Sortowanie i zapisywanie
 if "python.autoComplete.extraPaths" in config:
     config["python.autoComplete.extraPaths"] = sorted(list(set(config["python.autoComplete.extraPaths"])))
     config["python.analysis.extraPaths"] = config["python.autoComplete.extraPaths"]
@@ -231,4 +210,59 @@ with open(config_path, "w") as f:
     json.dump(config, f, indent=4)
 
 log(f"ZAPISANO KONFIGURACJĘ: {config_path}")
-log("Gotowe. Teraz możesz uruchomić 'distrobox-host-exec code .'")
+
+# --- AUTOMATYCZNE USTAWIANIE KOMENDY 'code' ---
+
+if running_distrobox:
+    local_bin = os.path.join(home_dir, ".local", "bin")
+    wrapper_path = os.path.join(local_bin, "code")
+    os.makedirs(local_bin, exist_ok=True)
+    
+    # 1. Tworzenie pliku 'code'
+    try:
+        with open(wrapper_path, "w") as f:
+            f.write('#!/bin/sh\ndistrobox-host-exec code "$@"\n')
+        
+        st = os.stat(wrapper_path)
+        os.chmod(wrapper_path, st.st_mode | stat.S_IEXEC)
+        log(f"Wrapper 'code' został utworzony/zaktualizowany.")
+    except Exception as e:
+        log(f"Błąd tworzenia wrappera: {e}")
+
+    # 2. Dodawanie do .bashrc jeśli brakuje
+    bashrc_path = os.path.join(home_dir, ".bashrc")
+    need_update = True
+    
+    # Sprawdź czy PATH już zawiera local/bin
+    if local_bin in os.environ["PATH"]:
+        need_update = False
+    
+    # Sprawdź czy .bashrc już zawiera wpis (żeby nie dublować)
+    if os.path.exists(bashrc_path):
+        with open(bashrc_path, "r") as f:
+            if ".local/bin" in f.read():
+                need_update = False
+    
+    if need_update:
+        log("Dodaję ~/.local/bin do zmiennej PATH w .bashrc...")
+        with open(bashrc_path, "a") as f:
+            f.write(f'\n# Dodano przez skrypt konfiguracyjny\nexport PATH="{local_bin}:$PATH"\n')
+            
+    # 3. MAGICZNY RESTART (Jeśli 'code' jeszcze nie działa)
+    # Sprawdzamy, czy komenda 'code' jest widoczna przez system
+    if shutil.which("code") is None or local_bin not in os.environ["PATH"]:
+        log("!" * 50)
+        log("Wykryto, że 'code .' jeszcze nie zadziała w tej sesji.")
+        log("Wykonuję AUTOMATYCZNE PRZEŁADOWANIE terminala...")
+        log("Ekran może na ułamek sekundy zgasnąć - to normalne.")
+        log("!" * 50)
+        time.sleep(1) # Krótka pauza, żebyś zdążył przeczytać log
+        
+        # Pobierz aktualną powłokę (np. /bin/bash)
+        shell = os.environ.get("SHELL", "/bin/bash")
+        
+        # Zastąp obecny proces nowym procesem Shella.
+        # To sprawi, że .bashrc zostanie wczytany od nowa.
+        os.execl(shell, shell)
+
+log("Gotowe. Wszystko skonfigurowane.")
