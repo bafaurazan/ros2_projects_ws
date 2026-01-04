@@ -1,33 +1,7 @@
 #!/usr/bin/bash
 
 # This script creates a new Distrobox or enters an existing one.
-# --- WSL PODMAN FIX START ---
-# Sprawdzamy, czy jesteśmy na WSL (szukając słowa 'microsoft' w wersji kernela)
-if grep -qEi "(Microsoft|WSL)" /proc/version; then
-    echo "Wykryto środowisko WSL. Sprawdzanie konfiguracji Podmana..."
-    
-    CONF_FILE="$HOME/.config/containers/containers.conf"
-    
-    # Jeśli plik nie istnieje lub nie zawiera kluczowej konfiguracji, tworzymy go
-    if [[ ! -f "$CONF_FILE" ]] || ! grep -q "cgroupfs" "$CONF_FILE"; then
-        echo "Naprawianie konfiguracji Podmana dla WSL..."
-        mkdir -p "$(dirname "$CONF_FILE")"
-        
-        cat <<EOF > "$CONF_FILE"
-[containers]
-log_driver = "k8s-file"
-pids_limit = 0
 
-[engine]
-cgroup_manager = "cgroupfs"
-events_logger = "file"
-EOF
-        echo "Konfiguracja Podmana zaktualizowana. Wymagany restart WSL."
-        echo "Proszę wykonaj 'wsl --shutdown' w PowerShell i uruchom skrypt ponownie."
-        exit 1
-    fi
-fi
-# --- WSL PODMAN FIX END ---
 ros_distro=humble
 additional_packages="iputils-ping nano vim alsa-utils alsa pulseaudio git git-man python3 python-is-python3 python3-pip usbutils"
 if [[ $ros_distro != "humble" ]]; then
@@ -62,6 +36,7 @@ if ! command -v flatpak &> /dev/null; then
 fi
 
 # Check if Distrobox home doesn't exist.
+# This is much faster than checking if Distrobox instance doesn't exist.
 if [[ ! -d $distrobox_home ]]; then
     # Check if Distrobox instance exists.
     if [[ $(distrobox list --no-color | tr -s ' ' | cut -d ' ' -f 3 | tail -n +2 | grep '^kalman_ws$' | wc -l) -ne 0 ]]; then
@@ -88,42 +63,19 @@ if [[ ! -d $distrobox_home ]]; then
     touch $distrobox_home/.sudo_as_admin_successful
 
     # Link up user Git config and SSH keys.
-    if [[ -f $HOME/.gitconfig ]]; then ln -s $HOME/.gitconfig $distrobox_home/.gitconfig; fi
-    if [[ -d $HOME/.ssh ]]; then ln -s $HOME/.ssh $distrobox_home/.ssh; fi
-
-    # --- BUILD COMMAND USING ARRAYS (Safe for WSL/Linux cross-compat) ---
-    
-    # Base command arguments
-    cmd_args=(
-        distrobox create
-        --image "docker.io/osrf/ros:$ros_distro-desktop-full"
-        --yes
-        --name kalman_ws
-        --home "$distrobox_home"
-        --additional-packages "$additional_packages"
-        --absolutely-disable-root-password-i-am-really-positively-sure
-        --init-hooks "chsh -s /usr/bin/bash $USER && (yes | sudo unminimize)"
-        --no-entry
-    )
+    ln -s $HOME/.gitconfig $distrobox_home/.gitconfig
+    ln -s $HOME/.ssh $distrobox_home/.ssh
 
     # Detect if the computer has an NVIDIA GPU.
     if [[ $(lspci | grep -i nvidia | wc -l) -ne 0 ]]; then
-        cmd_args+=(--nvidia)
-    fi
-
-    # Detect if USB bus is available (Fix for WSL crashing when no device is attached)
-    if [[ -d "/dev/bus/usb" ]]; then
-        echo "USB bus detected at /dev/bus/usb. Enabling USB mounting."
-        cmd_args+=(--additional-flags "--mount type=bind,source=/dev/bus/usb,target=/dev/bus/usb")
+        nvidia="--nvidia"
     else
-        echo "WARNING: /dev/bus/usb not found (Normal on WSL without attached devices)."
-        echo "Skipping USB mount to prevent crash."
+        nvidia=""
     fi
 
-    # Execute the command array
-    "${cmd_args[@]}"
-
-    # Check result
+    # Create the Distrobox.
+    
+    distrobox create --image docker.io/osrf/ros:$ros_distro-desktop-full --yes --name kalman_ws --home "$distrobox_home" --additional-packages "$additional_packages" --absolutely-disable-root-password-i-am-really-positively-sure --init-hooks "chsh -s /usr/bin/bash $USER && (yes | sudo unminimize)" $nvidia --no-entry --additional-flags "--mount type=bind,source=/dev/bus/usb,target=/dev/bus/usb"
     if [[ $? -ne 0 ]]; then
         echo "Failed to create Distrobox instance."
         rm -r .distrobox
@@ -131,6 +83,7 @@ if [[ ! -d $distrobox_home ]]; then
     fi
 
     # Copy template .bashrc
+    # This file can be edited by the user afterwards.
     cp $script_dir/distrobox-template.bashrc $distrobox_home/.bashrc
 
     # Replace "<<<ROS_DISTRO_TEMPLATE_SUBSTITUTION>>>"
