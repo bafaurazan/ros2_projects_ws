@@ -89,7 +89,7 @@ if [[ ! -d $distrobox_home ]]; then
     # Replace "<<<ROS_DISTRO_TEMPLATE_SUBSTITUTION>>>"
     sed -i "s/\"<<<ROS_DISTRO_TEMPLATE_SUBSTITUTION>>>\"/$ros_distro/g" $distrobox_home/.bashrc
 fi
-
+# xd test
 # Enter the Distrobox using a custom shell entrypoint which will
 # ensure that the login script is always sourced in .bashrc.
 distrobox enter kalman_ws
