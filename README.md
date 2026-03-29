@@ -1,6 +1,6 @@
 # Knml Workspace
 
-ROS 2 development environment for the knml_rover
+ROS 2 development environment for `knml_rover` and future ROS projects.
 
 ## Prerequisites
 
@@ -26,21 +26,23 @@ git submodule update --init --recursive
 
 ### Containerized Development
 
-To enter the ROS 2 shell, run this automated script:
+To enter the ROS 2 shell, run this automated script with a distro selector:
 ```bash
-./scripts/distrobox
+./scripts/distrobox humble
+# or
+./scripts/distrobox jazzy
 ```
-A new distrobox will be created and you will be logged in automatically.
+A distrobox dedicated to the selected distro will be created (if needed) and you will be logged in automatically.
 
 After the initial setup of your container is done, you will be able to use ROS 2 and graphical tools such as Rviz and Rqt.
 
 #### Building the Workspace
 
-This repository includes `knml_robot` repository as a submodule, but it might not always be up to date.
+This repository includes `knml_rover` repository as a submodule, but it might not always be up to date.
 Therefore, after your distrobox is ready, you should pull the latest changes from the remote repository:
 
 ```bash
-cd src/knml_robot
+cd src/knml_rover
 git checkout main
 git pull
 cd ../..
@@ -52,10 +54,11 @@ Now you can build the workspace. `knml_ws` provides a useful macro that can be u
 build
 ```
 
-Running this command will install all rosdeps, custom APT/PIP dependencies, build the workspace, source it, and configure Visual Studio Code for you.
-Visual Studio Code is configured by adding IntelliSense paths to `./.vscode/settings.json` and setting up a custom terminal profile, this ensures that every new terminal that you open within Visual Studio Code will automatically enter the distrobox so that you can develop on your host machine and seamlessly run the code in a container.
+Running this command will install all rosdeps, custom APT/PIP dependencies, build the workspace, and source it.
+Build artifacts are separated by distro and saved into `build_<distro>`, `install_<distro>`, and `log_<distro>`.
+Visual Studio Code initialization is currently disabled, because VS Code is not used at the moment.
 
-After the workspace is built, please visit [knml_robot](https://github.com/knmlprz/knml_rover/tree/main#) repository for instructions on how to start the robot.
+After the workspace is built, please visit [knml_rover](https://github.com/knmlprz/knml_rover/tree/main#) repository for instructions on how to start the robot.
 
 ### Native Ubuntu Development
 
@@ -64,12 +67,12 @@ If you do not wish to use a container, you can still make use of most of the fea
 - After that, you can enable all the macros normally available in Distrobox by sourcing the `./scripts/setup.bash` script from a Bash shell.
 For deployment, this script should be sourced from within the `.bashrc` file.
 
-In this alternate configuration Visual Studio Code's terminal profile will be configured to open a new Bash shell and source `./scripts/setup.bash` on entry.
+In this alternate configuration, source `./scripts/setup.bash` manually in your shell session (VS Code integration is currently disabled).
 
 
 ## Custom Macros
 
-- `build` - Pull from rosdep and build the workspace, then source its setup script. Additionally, Visual Studio Code is automatically configured for ease of use.
+- `build` - Pull from rosdep and build the workspace, then source its setup script.
 - `clean` - Remove build artifacts from the workspace.
 - `format` - Run `clang-format` and `black` on all packages in the workspace.
 
@@ -82,11 +85,15 @@ See: [macros.bash](/scripts/macros.bash)
 ## Project Structure
 
 ```yaml
-├─ .distrobox/            # Distrobox home directory (ignored)
+├─ .distrobox_humble/     # Distrobox home for ROS 2 Humble (ignored)
+├─ .distrobox_jazzy/      # Distrobox home for ROS 2 Jazzy (ignored)
 ├─ .vscode/               # Visual Studio Code configuration (ignored)
-├─ build/                 # ROS 2 build artifacts (ignored)
-├─ install/               # ROS 2 install artifacts (ignored)
-├─ log/                   # ROS 2 runtime artifacts (ignored)
+├─ build_humble/          # ROS 2 Humble build artifacts (ignored)
+├─ install_humble/        # ROS 2 Humble install artifacts (ignored)
+├─ log_humble/            # ROS 2 Humble runtime artifacts (ignored)
+├─ build_jazzy/           # ROS 2 Jazzy build artifacts (ignored)
+├─ install_jazzy/         # ROS 2 Jazzy install artifacts (ignored)
+├─ log_jazzy/             # ROS 2 Jazzy runtime artifacts (ignored)
 ├─ scripts/               # The implementation of the workspace
 │  ├─ .bashrc             # Knml dev env Bash overlay; Can be sourced both from Distrobox or from a standalone system.
 │  ├─ configure_vscode.py # Visual Studio auto-complete configuration script; called from macros.bash
@@ -94,5 +101,5 @@ See: [macros.bash](/scripts/macros.bash)
 │  ├─ distrobox           # Distrobox launch script
 │  └─ macros.bash         # Implements useful development macros; included by .bashrc
 └─ src/                   # the package directory
-   └─ knml_robot/       # a single submodule for all packages that make up Knml's software stack
+   └─ knml_rover/         # a single submodule for all packages that make up Knml's software stack
 ```

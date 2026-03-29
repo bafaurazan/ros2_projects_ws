@@ -67,11 +67,16 @@ def elem(arr, index, default=None):
 current_dir = os.path.dirname(os.path.abspath(__file__))
 # Zakładamy strukturę: workspace/scripts/ten_skrypt.py -> workspace
 ws_dir = os.path.abspath(os.path.join(current_dir, "..")) 
+ros_distro = os.environ.get("ROS_DISTRO", "humble")
+ros_root = f"/opt/ros/{ros_distro}"
 
 log(f"Workspace directory: {ws_dir}")
+log(f"ROS distro: {ros_distro}")
 
 config_path = os.path.join(ws_dir, ".vscode/settings.json")
-compile_commands_path = os.path.join(ws_dir, "build/compile_commands.json")
+compile_commands_path = os.path.join(ws_dir, f"build_{ros_distro}/compile_commands.json")
+if not os.path.isfile(compile_commands_path):
+    compile_commands_path = os.path.join(ws_dir, "build/compile_commands.json")
 
 home_dir = os.path.expanduser("~")
 site_dir = os.path.join(home_dir, ".vscode-paths/ros2-site-packages")
@@ -87,11 +92,11 @@ if running_distrobox:
     log("Wykryto środowisko Distrobox/Kontener.")
     
     log("Kopiowanie site-packages ROSa...")
-    copy_if_updated(elem(glob.glob("/opt/ros/*/lib/python*/site-packages"), 0), site_dir)
-    copy_if_updated(elem(glob.glob("/opt/ros/*/local/lib/python*/dist-packages"), 0), dist_dir)
+    copy_if_updated(elem(glob.glob(f"{ros_root}/lib/python*/site-packages"), 0), site_dir)
+    copy_if_updated(elem(glob.glob(f"{ros_root}/local/lib/python*/dist-packages"), 0), dist_dir)
     
     log("Kopiowanie nagłówków ROSa...")
-    copy_if_updated(elem(glob.glob("/opt/ros/*/include"), 0), include_dir)
+    copy_if_updated(os.path.join(ros_root, "include"), include_dir)
     
     log("Kopiowanie systemowych nagłówków (/usr/include)...")
     copy_if_updated("/usr/include", usr_include_dir)
@@ -129,9 +134,12 @@ distrobox_script_path = os.path.join(ws_dir, "scripts/distrobox")
 if running_distrobox:
     if os.path.isfile(distrobox_script_path):
         config["terminal.integrated.profiles.linux"] = {
-            "kalman_ws": {"path": distrobox_script_path}
+            f"ros2_projects_ws_{ros_distro}": {
+                "path": distrobox_script_path,
+                "args": [ros_distro],
+            }
         }
-        config["terminal.integrated.defaultProfile.linux"] = "kalman_ws"
+        config["terminal.integrated.defaultProfile.linux"] = f"ros2_projects_ws_{ros_distro}"
     else:
         # Fallback if specific script not found
         pass
@@ -139,12 +147,12 @@ else:
     bashrc_path = os.path.join(ws_dir, "scripts/native-ubuntu.bashrc")
     if os.path.isfile(bashrc_path):
         config["terminal.integrated.profiles.linux"] = {
-            "kalman_ws": {
+            "ros2_projects_ws": {
                 "path": f"/usr/bin/bash",
                 "args": ["--rcfile", bashrc_path]
             }
         }
-        config["terminal.integrated.defaultProfile.linux"] = "kalman_ws"
+        config["terminal.integrated.defaultProfile.linux"] = "ros2_projects_ws"
 
 if running_distrobox:
     config["python.autoComplete.extraPaths"] = [site_dir, dist_dir] + usr_lib_python_dirs
@@ -153,20 +161,21 @@ else:
     config["python.autoComplete.extraPaths"] = []
     config["C_Cpp.default.includePath"] = []
 
-install_dir = os.path.join(ws_dir, "install")
-if os.path.isdir(install_dir):
-    for item in os.listdir(install_dir):
-        item_dir = os.path.join(install_dir, item)
-        if os.path.isdir(item_dir):
-            for sp in glob.glob(os.path.join(item_dir, "lib", "python*", "site-packages")) + \
-                      glob.glob(os.path.join(item_dir, "local", "lib", "python*", "dist-packages")):
-                if sp not in config["python.autoComplete.extraPaths"]:
-                    config["python.autoComplete.extraPaths"].append(sp)
-            
-            for inc in glob.glob(os.path.join(item_dir, "include")):
-                inc_path = inc + "/**"
-                if inc_path not in config["C_Cpp.default.includePath"]:
-                    config["C_Cpp.default.includePath"].append(inc_path)
+install_dirs = [os.path.join(ws_dir, f"install_{ros_distro}"), os.path.join(ws_dir, "install")]
+for install_dir in install_dirs:
+    if os.path.isdir(install_dir):
+        for item in os.listdir(install_dir):
+            item_dir = os.path.join(install_dir, item)
+            if os.path.isdir(item_dir):
+                for sp in glob.glob(os.path.join(item_dir, "lib", "python*", "site-packages")) + \
+                          glob.glob(os.path.join(item_dir, "local", "lib", "python*", "dist-packages")):
+                    if sp not in config["python.autoComplete.extraPaths"]:
+                        config["python.autoComplete.extraPaths"].append(sp)
+                
+                for inc in glob.glob(os.path.join(item_dir, "include")):
+                    inc_path = inc + "/**"
+                    if inc_path not in config["C_Cpp.default.includePath"]:
+                        config["C_Cpp.default.includePath"].append(inc_path)
 
 if running_distrobox:
     host_local_lib = os.path.expanduser("~/.local/lib/python*/")
@@ -181,8 +190,7 @@ if running_distrobox:
             with open(compile_commands_path, "r", encoding="UTF-8") as f:
                 compile_commands = f.read()
             
-            for ros_include_dir in glob.glob("/opt/ros/*/include"):
-                compile_commands = compile_commands.replace(ros_include_dir, include_dir)
+            compile_commands = compile_commands.replace(os.path.join(ros_root, "include"), include_dir)
             
             compile_commands = compile_commands.replace(f"-I{include_dir}", f"-isystem {include_dir}")
             compile_commands = compile_commands.replace("/usr/include", usr_include_dir)

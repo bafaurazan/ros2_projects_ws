@@ -3,6 +3,11 @@
 # Executes colcon build in workspace.
 build() {
     local prev_dir=$(pwd)
+    local ros_distro_name=${ROS_DISTRO:-humble}
+    local build_base="build_${ros_distro_name}"
+    local install_base="install_${ros_distro_name}"
+    local log_base="log_${ros_distro_name}"
+    local cache_base_dir="$HOME/.cache/ros2_projects_ws/${ros_distro_name}"
     cd $_KALMAN_WS_ROOT
     
     # Select packages to build.
@@ -34,7 +39,7 @@ build() {
     fi
     
     # Install rosdep dependencies.
-    mkdir -p $HOME/.cache/kalman_ws
+    mkdir -p "$cache_base_dir"
     local can_skip_rosdep_json=$(python3 $_KALMAN_WS_ROOT/scripts/can_skip_install.py --marker-file=rosdep_mod_times.json --trigger-file=package.xml $pkg_paths)
     if [ -n "$can_skip_rosdep_json" ]; then
         echo "Installing rosdep dependencies..."
@@ -45,7 +50,7 @@ build() {
             return
         fi
         # Update marker file.
-        echo "$can_skip_rosdep_json" > $HOME/.cache/kalman_ws/rosdep_mod_times.json
+        echo "$can_skip_rosdep_json" > "$cache_base_dir/rosdep_mod_times.json"
     fi
 
     # Install additional APT dependencies.
@@ -75,7 +80,7 @@ build() {
                 done
             fi
         done
-        echo "$can_skip_apt_txt" > $HOME/.cache/kalman_ws/apt_mod_times.json
+        echo "$can_skip_apt_json" > "$cache_base_dir/apt_mod_times.json"
     fi
 
     # Install additional PIP dependencies.
@@ -106,21 +111,20 @@ build() {
                 done
             fi
         done
-        echo "$can_skip_pipe_json" > $HOME/.cache/kalman_ws/pip_mod_times.json
+        echo "$can_skip_pipe_json" > "$cache_base_dir/pip_mod_times.json"
     fi
 
     # Build the workspace.
     echo "Building packages..."
-    colcon build --symlink-install --base-paths src --packages-select $pkg_names --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=1 --no-warn-unused-cli
+    colcon --log-base "$log_base" build --symlink-install --base-paths src --build-base "$build_base" --install-base "$install_base" --packages-select $pkg_names --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=1 --no-warn-unused-cli
     if [ $? -ne 0 ]; then
         echo "Failed to build some packages."
         cd $prev_dir
         return
     fi
 
-    # Load .vscode/settings.json.
-    echo "Updating Visual Studio Code settings..."
-    python3 $_KALMAN_WS_ROOT/scripts/configure_vscode.py
+    # Visual Studio Code integration is currently disabled.
+    echo "Skipping Visual Studio Code initialization (currently not used)."
 
     # Source setup scripts.
     source $_KALMAN_WS_ROOT/scripts/source-ros-setups.bash
@@ -132,6 +136,10 @@ build() {
 # Removes build artifacts in workspace.
 clean() {
     local prev_dir=$(pwd)
+    local ros_distro_name=${ROS_DISTRO:-humble}
+    local build_base="build_${ros_distro_name}"
+    local install_base="install_${ros_distro_name}"
+    local log_base="log_${ros_distro_name}"
     cd $_KALMAN_WS_ROOT
 
     # Select packages to build.
@@ -145,7 +153,7 @@ clean() {
         while IFS=: read -r name path; do
             local pkg_names="$pkg_names $name"
             local pkg_paths="$pkg_paths $path"
-        done < <(python3 "$_KALMAN_WS_ROOT/scripts/select_colcon_packages.py" "$@" kalman_ws_disable_recursive_dependencies_in_selection)
+        done < <(python3 "$_KALMAN_WS_ROOT/scripts/select_colcon_packages.py" "$@" ros2_projects_ws_disable_recursive_dependencies_in_selection)
 
         # If no packages are found, show an error messeage and return.
         if [ -z "$pkg_names" ]; then
@@ -162,16 +170,16 @@ clean() {
 
         # Remove build artifacts.
         for pkg_name in $pkg_names; do
-            rm -rf $_KALMAN_WS_ROOT/build/$pkg_name
-            rm -rf $_KALMAN_WS_ROOT/install/$pkg_name
+            rm -rf "$_KALMAN_WS_ROOT/$build_base/$pkg_name"
+            rm -rf "$_KALMAN_WS_ROOT/$install_base/$pkg_name"
         done
     else
         echo "Cleaning all build artifacts."
 
         # If not arguments were provided, perform a full wipe.
-        rm -rf $_KALMAN_WS_ROOT/build
-        rm -rf $_KALMAN_WS_ROOT/install
-        rm -rf $_KALMAN_WS_ROOT/log
+        rm -rf "$_KALMAN_WS_ROOT/$build_base"
+        rm -rf "$_KALMAN_WS_ROOT/$install_base"
+        rm -rf "$_KALMAN_WS_ROOT/$log_base"
     fi
 
     # Remove paths from $AMENT_PREFIX_PATH and $CMAKE_PREFIX_PATH.
@@ -241,6 +249,10 @@ format() {
 # This macro cannot be named 'test' because it conflicts with the built-in test command in Bash.
 lint() {
     local prev_dir=$(pwd)
+    local ros_distro_name=${ROS_DISTRO:-humble}
+    local build_base="build_${ros_distro_name}"
+    local install_base="install_${ros_distro_name}"
+    local log_base="log_${ros_distro_name}"
     cd $_KALMAN_WS_ROOT
 
     # Select packages to test.
@@ -270,7 +282,7 @@ lint() {
     echo "Running tests:"
 
     # Throw if workspace has not been built.
-    if [ ! -d "build" ]; then
+    if [ ! -d "$build_base" ]; then
         echo "Workspace has not been built yet. Run 'build' first."
         cd $prev_dir
         return
@@ -278,9 +290,9 @@ lint() {
 
     # Run Colcon test.
     if [ -z "$pkg_names" ]; then
-        colcon test --base-paths src
+        colcon --log-base "$log_base" test --base-paths src --build-base "$build_base" --install-base "$install_base"
     else
-        colcon test --base-paths src --packages-select $pkg_names
+        colcon --log-base "$log_base" test --base-paths src --build-base "$build_base" --install-base "$install_base" --packages-select $pkg_names
     fi
 
     # TODO: Somethow detect test failure and provide results for only the selected packages.

@@ -1,5 +1,5 @@
 # This bashrc script configures Kalman workspace Distrobox on login.
-# It should be run as kalman_ws/.distrobox/.bashrc.
+# It should be run as ros2_projects_ws/.distrobox/.bashrc.
 
 # Source the default Ubuntu configuration.
 # This sets up the prompt, aliases, colors, etc.
@@ -24,5 +24,5 @@ export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin
 ulimit -Sn 524288
 ulimit -Hn 524288
 
-# Source kalman_ws setup just like it would be done on a native Ubuntu install.
+# Source ros2_projects_ws setup just like it would be done on a native Ubuntu install.
 source $(dirname $BASH_SOURCE)/../scripts/setup.bash

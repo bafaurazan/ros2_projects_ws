@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
     # Recursively add dependencies of selected packages.
     pkgs_to_build = selected_pkgs.copy()
-    if "kalman_ws_disable_recursive_dependencies_in_selection" not in queries:
+    if "ros2_projects_ws_disable_recursive_dependencies_in_selection" not in queries:
         pkgs_to_discover = pkgs_to_build.copy()
         while True:
             prev_pkgs_to_build = pkgs_to_build.copy()

@@ -26,12 +26,12 @@ if __name__ == "__main__":
         path = os.path.join(pkg, args.trigger_file)
         cur_mods[pkg] = os.path.getmtime(path)
 
-    # Read mods from ~/.cache/kalman_ws/
+    ros_distro = os.environ.get("ROS_DISTRO", "humble")
+    cache_dir = os.path.join(os.path.expanduser("~/.cache/ros2_projects_ws"), ros_distro)
+
+    # Read mods from distro-specific cache to avoid cross-distro collisions.
     try:
-        with open(
-            os.path.join(os.path.expanduser("~/.cache/kalman_ws"), args.marker_file),
-            "r",
-        ) as f:
+        with open(os.path.join(cache_dir, args.marker_file), "r") as f:
             last_mods = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         last_mods = {}

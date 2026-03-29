@@ -20,7 +20,7 @@ kalm() {
         echo "  - pwetty: Format the codebase using a combination of tools."
         echo "  - ok: Run colcon test."
         echo "  - chonk: Show storage statistics for the repository you are currently in."
-        echo "  - yeet: Reset and pull the latest changes from the remote for all repositories in kalman_ws."
+        echo "  - yeet: Reset and pull the latest changes from the remote for all repositories in ros2_projects_ws."
     fi
 }
 
