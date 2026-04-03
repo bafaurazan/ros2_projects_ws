@@ -1,3 +1,0 @@
-#!/usr/bin/sh
-
-distrobox stop --yes ros2_projects_ws

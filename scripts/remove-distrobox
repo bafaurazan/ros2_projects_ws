@@ -1,9 +1,0 @@
-#!/usr/bin/sh
-
-distrobox stop --yes ros2_projects_ws
-distrobox rm --yes --force --rm-home ros2_projects_ws
-
-# Remove ~/.distrobox because it won't be removed by Distrobox if workspace was moved to a different location.
-script_dir="$(cd "$(dirname "$0")" && pwd)"
-ws_dir="$(cd "$script_dir/.." && pwd)"
-rm -rf $ws_dir/.distrobox
