@@ -15,6 +15,30 @@ if [[ $ros_distro != "humble" ]]; then
     additional_packages="$additional_packages unminimize"
 fi
 
+# Select ROS Docker image based on host architecture.
+# Can be overridden manually, e.g.:
+#   ROS_DOCKER_IMAGE=docker.io/osrf/ros:jazzy-desktop-full ./scripts/distrobox jazzy
+host_arch="$(uname -m)"
+case "$host_arch" in
+    x86_64|amd64)
+        default_ros_image="docker.io/osrf/ros:${ros_distro}-desktop-full"
+        ;;
+    aarch64|arm64)
+        # The osrf desktop images may not always be available as arm64 variants.
+        # arm64v8/ros is widely available and avoids exec format errors on Raspberry Pi.
+        default_ros_image="docker.io/arm64v8/ros:${ros_distro}-ros-base"
+        ;;
+    armv7l|armhf)
+        default_ros_image="docker.io/arm32v7/ros:${ros_distro}-ros-base"
+        ;;
+    *)
+        echo "Unsupported architecture '$host_arch'."
+        echo "Set ROS_DOCKER_IMAGE manually and retry."
+        exit 1
+        ;;
+esac
+ros_image="${ROS_DOCKER_IMAGE:-$default_ros_image}"
+
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 ws_dir="$(cd "$script_dir/.." && pwd)"
 distrobox_home="$ws_dir/.distrobox_${ros_distro}"
@@ -87,7 +111,8 @@ if [[ ! -d $distrobox_home ]]; then
         init_hooks="$init_hooks && (yes | sudo unminimize)"
     fi
 
-    distrobox create --image "docker.io/osrf/ros:$ros_distro-desktop-full" --yes --name "$container_name" --home "$distrobox_home" --additional-packages "$additional_packages" --absolutely-disable-root-password-i-am-really-positively-sure --init-hooks "$init_hooks" $nvidia --no-entry --additional-flags "--mount type=bind,source=/dev/bus/usb,target=/dev/bus/usb"
+    echo "Using image: $ros_image"
+    distrobox create --image "$ros_image" --yes --name "$container_name" --home "$distrobox_home" --additional-packages "$additional_packages" --absolutely-disable-root-password-i-am-really-positively-sure --init-hooks "$init_hooks" $nvidia --no-entry --additional-flags "--mount type=bind,source=/dev/bus/usb,target=/dev/bus/usb"
     if [[ $? -ne 0 ]]; then
         echo "Failed to create Distrobox instance."
         rm -rf "$distrobox_home"
