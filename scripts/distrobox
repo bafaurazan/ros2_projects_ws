@@ -109,4 +109,4 @@ EOF
 fi
 "
 
-distrobox enter "$container_name"
+distrobox enter "$container_name" -- /usr/bin/bash -i

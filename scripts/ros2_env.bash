@@ -13,6 +13,11 @@ export ROS2_PROJECTS_WS_ROOT="$(cd "$script_dir/.." && pwd)"
 export ROS_DISTRO="${ROS_DISTRO:-humble}"
 export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-0}"
 
+# Prevent stale overlays from a different ROS distro leaking into this shell.
+unset AMENT_PREFIX_PATH
+unset CMAKE_PREFIX_PATH
+unset COLCON_PREFIX_PATH
+
 if [ -f "/opt/ros/$ROS_DISTRO/local_setup.bash" ]; then
     source "/opt/ros/$ROS_DISTRO/local_setup.bash"
 fi

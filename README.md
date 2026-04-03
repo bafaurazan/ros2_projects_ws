@@ -61,6 +61,20 @@ build
 build my_pkg another_pkg
 ```
 
+## Diagnostic Macro
+
+Use `diag` to quickly print system info and validate environment from `scripts/ros2_env.bash`:
+
+```bash
+diag
+```
+
+It checks:
+- ROS/Cyclone variables are present
+- `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp`
+- `CYCLONEDDS_URI` points to workspace `scripts/cyclone-dds.xml`
+- env load marker (`_ROS2_PROJECTS_WS_ENV_LOADED`) is set
+
 ## Project Structure
 
 ```yaml
