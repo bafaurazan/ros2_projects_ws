@@ -15,7 +15,26 @@ build() {
     rosdep update --rosdistro "$ros_distro_name"
 
     echo "Installing rosdep dependencies..."
-    rosdep install --rosdistro "$ros_distro_name" --default-yes --ignore-packages-from-source --from-paths ./src
+    # rosdep keys are resolved per --from-paths root. Nested trees that ship several sibling
+    # ROS packages under one directory (same as upstream "rosdep ... --from-paths ." in that
+    # repo) need that parent on the path list—not only ./src. Detect any dir under ./src that
+    # has two or more immediate subdirs each containing package.xml (e.g. vendor/foo/pkg_a, pkg_b).
+    local rosdep_paths=(./src)
+    declare -A _rosdep_seen=()
+    _rosdep_seen["./src"]=1
+    local d
+    while IFS= read -r -d '' d; do
+        shopt -s nullglob
+        local -a _nested_pkgs=( "$d"/*/package.xml )
+        shopt -u nullglob
+        ((${#_nested_pkgs[@]} >= 2)) || continue
+        [[ -n ${_rosdep_seen[$d]:-} ]] && continue
+        _rosdep_seen[$d]=1
+        rosdep_paths+=("$d")
+    done < <(find ./src -type d -print0)
+
+    rosdep install --rosdistro "$ros_distro_name" --default-yes \
+        --ignore-packages-from-source -r --from-paths "${rosdep_paths[@]}"
 
     echo "Installing additional APT dependencies..."
     while IFS= read -r apt_file; do

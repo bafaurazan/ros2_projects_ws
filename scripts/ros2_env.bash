@@ -22,6 +22,48 @@ if [ -f "/opt/ros/$ROS_DISTRO/local_setup.bash" ]; then
     source "/opt/ros/$ROS_DISTRO/local_setup.bash"
 fi
 
+# GUI over SSH: set DISPLAY + a non-empty XAUTHORITY so X11 clients can authenticate to the
+# local desktop (avoids "Authorization required, but no authorization protocol specified").
+# Disable: export ROS2_AUTO_LOCAL_DISPLAY=0
+_ros2_pick_xauthority() {
+    local _cand
+    shopt -s nullglob
+    for _cand in \
+        "${HOME}/.Xauthority" \
+        "/run/user/$(id -u)/gdm/Xauthority" \
+        "/run/user/$(id -u)/lightdm/xauthority" \
+        "/var/lib/lightdm-data/${USER}/.Xauthority" \
+        /run/user/"$(id -u)"/.mutter-Xwaylandauth.* \
+        /run/user/"$(id -u)"/xauth_*
+    do
+        [[ -s "$_cand" ]] || continue
+        export XAUTHORITY="$_cand"
+        shopt -u nullglob
+        return 0
+    done
+    shopt -u nullglob
+    return 1
+}
+
+if [[ "${ROS2_AUTO_LOCAL_DISPLAY:-1}" != "0" ]]; then
+    if [[ -z "${DISPLAY:-}" ]]; then
+        for _ros2_xd in :0 :1; do
+            _ros2_xsock="/tmp/.X11-unix/X${_ros2_xd#:}"
+            if [[ -S "$_ros2_xsock" ]]; then
+                export DISPLAY="${_ros2_xd}"
+                [[ -n "${XAUTHORITY:-}" ]] || _ros2_pick_xauthority || true
+                break
+            fi
+        done
+        unset _ros2_xd _ros2_xsock
+    elif [[ -z "${XAUTHORITY:-}" ]]; then
+        case "${DISPLAY}" in
+            :0|:1) _ros2_pick_xauthority || true ;;
+        esac
+    fi
+fi
+unset -f _ros2_pick_xauthority
+
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 export CYCLONEDDS_URI="file://$ROS2_PROJECTS_WS_ROOT/scripts/cyclone-dds.xml"
 
