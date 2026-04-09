@@ -107,6 +107,18 @@ fi
 # END ROS2_PROJECTS_WS_ENV
 EOF
 fi
+
+# Ensure CycloneDDS RMW is installed (idempotent).
+if command -v apt-get >/dev/null 2>&1; then
+    pkg=\"ros-${ros_distro}-rmw-cyclonedds-cpp\"
+    if ! dpkg -s \"\$pkg\" >/dev/null 2>&1; then
+        echo \"Installing \$pkg...\"
+        sudo apt-get update
+        if ! sudo apt-get install -y \"\$pkg\"; then
+            echo \"WARNING: Failed to install \$pkg (package may be unavailable for this image/distro).\"
+        fi
+    fi
+fi
 "
 
 distrobox enter "$container_name" -- /usr/bin/bash -i

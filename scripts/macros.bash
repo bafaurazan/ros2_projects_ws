@@ -53,20 +53,11 @@ build() {
     done < <(find ./src -type f -name requirements.txt)
 
     echo "Building packages..."
-    local colcon_args=(
-        "--log-base" "$log_base"
-        "build"
-        "--base-paths" "./src"
-        "--build-base" "$build_base"
-        "--install-base" "$install_base"
-        "--symlink-install"
-    )
-
     if [ "$#" -gt 0 ]; then
-        colcon_args+=("--packages-select" "$@")
+        colcon_build_distro --packages-select "$@"
+    else
+        colcon_build_distro
     fi
-
-    colcon "${colcon_args[@]}"
 
     if [ -f "./${install_base}/local_setup.bash" ]; then
         # colcon local_setup can reference COLCON_CURRENT_PREFIX while bootstrapping.
@@ -84,6 +75,28 @@ build() {
 
     echo "Done."
 }
+
+colcon_build_distro() {
+    if [ ! -d "./src" ]; then
+        echo "Missing ./src in current directory: $(pwd)"
+        return 1
+    fi
+
+    local ros_distro_name="${ROS_DISTRO:-humble}"
+    local build_base="build_${ros_distro_name}"
+    local install_base="install_${ros_distro_name}"
+    local log_base="log_${ros_distro_name}"
+
+    colcon --log-base "$log_base" build \
+        --base-paths "./src" \
+        --build-base "$build_base" \
+        --install-base "$install_base" \
+        --symlink-install \
+        "$@"
+}
+
+# Convenience alias: distro-aware colcon build (build_<distro>, install_<distro>, log_<distro>).
+alias cbuild='colcon_build_distro'
 
 diag() {
     echo "=== System ==="
