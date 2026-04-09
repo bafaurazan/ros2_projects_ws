@@ -17,72 +17,63 @@ build() {
         return 1
     fi
 
+    local install_deps=1
+    if [ "${1:-}" = "--no-deps" ]; then
+        install_deps=0
+        shift
+    fi
+
     local ros_distro_name="${ROS_DISTRO:-humble}"
     local build_base="build_${ros_distro_name}"
     local install_base="install_${ros_distro_name}"
     local log_base="log_${ros_distro_name}"
 
-    echo "Updating rosdep index..."
-    rosdep update --rosdistro "$ros_distro_name"
+    if [ "$install_deps" -eq 1 ]; then
+        echo "Updating rosdep index..."
+        rosdep update --rosdistro "$ros_distro_name"
 
-    echo "Installing rosdep dependencies..."
-    # Some repos nest multiple sibling packages below a non-`./src` directory (e.g. `./src/vendor/foo/pkg_a`,
-    # `./src/vendor/foo/pkg_b`). `rosdep` needs `--from-paths` to include that parent directory to resolve keys.
-    # The block below auto-detects such "package clusters" and adds them to the rosdep scan list.
-    local rosdep_paths=(./src)
-    declare -A _rosdep_seen=()
-    _rosdep_seen["./src"]=1
-    local d
-    while IFS= read -r -d '' d; do
-        shopt -s nullglob
-        local -a _nested_pkgs=( "$d"/*/package.xml )
-        shopt -u nullglob
-        ((${#_nested_pkgs[@]} >= 2)) || continue
-        [[ -n ${_rosdep_seen[$d]:-} ]] && continue
-        _rosdep_seen[$d]=1
-        rosdep_paths+=("$d")
-    done < <(find ./src -type d -print0)
+        echo "Installing rosdep dependencies..."
+        # Some repos nest multiple sibling packages below a non-`./src` directory (e.g. `./src/vendor/foo/pkg_a`,
+        # `./src/vendor/foo/pkg_b`). `rosdep` needs `--from-paths` to include that parent directory to resolve keys.
+        # The block below auto-detects such "package clusters" and adds them to the rosdep scan list.
+        local rosdep_paths=(./src)
+        declare -A _rosdep_seen=()
+        _rosdep_seen["./src"]=1
+        local d
+        while IFS= read -r -d '' d; do
+            shopt -s nullglob
+            local -a _nested_pkgs=( "$d"/*/package.xml )
+            shopt -u nullglob
+            ((${#_nested_pkgs[@]} >= 2)) || continue
+            [[ -n ${_rosdep_seen[$d]:-} ]] && continue
+            _rosdep_seen[$d]=1
+            rosdep_paths+=("$d")
+        done < <(find ./src -type d -print0)
 
-    rosdep install --rosdistro "$ros_distro_name" --default-yes \
-        --ignore-packages-from-source -r --from-paths "${rosdep_paths[@]}"
+        rosdep install --rosdistro "$ros_distro_name" --default-yes \
+            --ignore-packages-from-source -r --from-paths "${rosdep_paths[@]}"
 
-    echo "Installing additional APT dependencies..."
-    while IFS= read -r apt_file; do
-        [ -n "$apt_file" ] || continue
-        while IFS= read -r apt_pkg; do
-            apt_pkg="$(echo "$apt_pkg" | sed 's/\s*#.*$//g' | xargs)"
-            [ -n "$apt_pkg" ] || continue
-            sudo apt-get install -y "$apt_pkg"
-        done < "$apt_file"
-    done < <(find ./src -type f -name apt_packages.txt)
+        echo "Installing additional APT dependencies..."
+        while IFS= read -r apt_file; do
+            [ -n "$apt_file" ] || continue
+            while IFS= read -r apt_pkg; do
+                apt_pkg="$(echo "$apt_pkg" | sed 's/\s*#.*$//g' | xargs)"
+                [ -n "$apt_pkg" ] || continue
+                sudo apt-get install -y "$apt_pkg"
+            done < "$apt_file"
+        done < <(find ./src -type f -name apt_packages.txt)
 
-    echo "Installing additional PIP dependencies..."
-    while IFS= read -r req_file; do
-        [ -n "$req_file" ] || continue
-        python3 -m pip install -r "$req_file"
-    done < <(find ./src -type f -name requirements.txt)
+        echo "Installing additional PIP dependencies..."
+        while IFS= read -r req_file; do
+            [ -n "$req_file" ] || continue
+            python3 -m pip install -r "$req_file"
+        done < <(find ./src -type f -name requirements.txt)
+    else
+        echo "Skipping dependency installation (--no-deps)."
+    fi
 
     echo "Building packages..."
-    if [ "$#" -gt 0 ]; then
-        colcon_build_distro --packages-select "$@"
-    else
-        colcon_build_distro
-    fi
-
-    if [ -f "./${install_base}/local_setup.bash" ]; then
-        # `local_setup.bash` may rely on variables during bootstrap; tolerate shells with `set -u`.
-        local had_nounset=0
-        if [[ $- == *u* ]]; then
-            had_nounset=1
-            set +u
-        fi
-        source "./${install_base}/local_setup.bash"
-        if [ "$had_nounset" -eq 1 ]; then
-            set -u
-        fi
-    fi
-
-    echo "Done."
+    colcon_build_distro "$@"
 }
 
 colcon_build_distro() {
@@ -108,6 +99,21 @@ colcon_build_distro() {
         --install-base "$install_base" \
         --symlink-install \
         "$@"
+
+    if [ -f "./${install_base}/local_setup.bash" ]; then
+        # `local_setup.bash` may rely on variables during bootstrap; tolerate shells with `set -u`.
+        local had_nounset=0
+        if [[ $- == *u* ]]; then
+            had_nounset=1
+            set +u
+        fi
+        source "./${install_base}/local_setup.bash"
+        if [ "$had_nounset" -eq 1 ]; then
+            set -u
+        fi
+    fi
+
+    echo "Done."
 }
 
 # Convenience alias for interactive use.
