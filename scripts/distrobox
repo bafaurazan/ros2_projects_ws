@@ -2,6 +2,18 @@
 
 set -euo pipefail
 
+# `scripts/distrobox` bootstraps and enters a ROS container via Distrobox.
+# It is safe to run repeatedly: container creation and shell init are idempotent.
+#
+# Usage:
+#   ./scripts/distrobox [humble|jazzy]
+#
+# Key behavior:
+# - Creates a per-distro home at `.distrobox_<distro>` (keeps config/cache separate).
+# - Binds the workspace from host into the container.
+# - Ensures `scripts/ros2_env.bash` is sourced in the container's interactive shells.
+# - Ensures CycloneDDS RMW is installed for the chosen ROS distro (apt-based images).
+#
 ros_distro="${1:-${ROS_DISTRO:-humble}}"
 if [[ "$ros_distro" != "humble" && "$ros_distro" != "jazzy" ]]; then
     echo "Unsupported ROS distro: $ros_distro"

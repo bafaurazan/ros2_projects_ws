@@ -1,5 +1,16 @@
 #!/usr/bin/bash
 
+#
+# ROS2 Projects workspace helpers.
+#
+# This file is sourced by `scripts/ros2_env.bash` inside the container shell.
+#
+# What you get:
+# - `build [<pkg> ...]`: "bootstrap + build" helper for a ROS2 workspace.
+# - `cbuild [colcon args...]`: distro-aware `colcon build` that writes to build_<distro>/install_<distro>/log_<distro>.
+# - `diag`: quick environment sanity checks (CycloneDDS/RMW + paths).
+#
+
 build() {
     if [ ! -d "./src" ]; then
         echo "Missing ./src in current directory: $(pwd)"
@@ -15,10 +26,9 @@ build() {
     rosdep update --rosdistro "$ros_distro_name"
 
     echo "Installing rosdep dependencies..."
-    # rosdep keys are resolved per --from-paths root. Nested trees that ship several sibling
-    # ROS packages under one directory (same as upstream "rosdep ... --from-paths ." in that
-    # repo) need that parent on the path list—not only ./src. Detect any dir under ./src that
-    # has two or more immediate subdirs each containing package.xml (e.g. vendor/foo/pkg_a, pkg_b).
+    # Some repos nest multiple sibling packages below a non-`./src` directory (e.g. `./src/vendor/foo/pkg_a`,
+    # `./src/vendor/foo/pkg_b`). `rosdep` needs `--from-paths` to include that parent directory to resolve keys.
+    # The block below auto-detects such "package clusters" and adds them to the rosdep scan list.
     local rosdep_paths=(./src)
     declare -A _rosdep_seen=()
     _rosdep_seen["./src"]=1
@@ -60,8 +70,7 @@ build() {
     fi
 
     if [ -f "./${install_base}/local_setup.bash" ]; then
-        # colcon local_setup can reference COLCON_CURRENT_PREFIX while bootstrapping.
-        # Avoid crashing interactive shells if nounset is enabled externally.
+        # `local_setup.bash` may rely on variables during bootstrap; tolerate shells with `set -u`.
         local had_nounset=0
         if [[ $- == *u* ]]; then
             had_nounset=1
@@ -77,6 +86,12 @@ build() {
 }
 
 colcon_build_distro() {
+    # Usage:
+    #   cbuild [colcon build args...]
+    #   colcon_build_distro [colcon build args...]
+    #
+    # Uses `ROS_DISTRO` to keep build/install/log outputs separate per distro:
+    #   build_<distro>/ install_<distro>/ log_<distro>/
     if [ ! -d "./src" ]; then
         echo "Missing ./src in current directory: $(pwd)"
         return 1
@@ -95,7 +110,7 @@ colcon_build_distro() {
         "$@"
 }
 
-# Convenience alias: distro-aware colcon build (build_<distro>, install_<distro>, log_<distro>).
+# Convenience alias for interactive use.
 alias cbuild='colcon_build_distro'
 
 diag() {

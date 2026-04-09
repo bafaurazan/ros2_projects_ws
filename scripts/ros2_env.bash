@@ -1,6 +1,15 @@
 #!/usr/bin/bash
 
+#
 # Minimal ROS environment loaded in every container shell.
+#
+# Responsibilities:
+# - Define workspace root (`ROS2_PROJECTS_WS_ROOT`).
+# - Select ROS distro + domain defaults.
+# - Source `/opt/ros/$ROS_DISTRO` if present.
+# - Set CycloneDDS as default RMW and point it at `scripts/cyclone-dds.xml`.
+# - Source `scripts/macros.bash` (helpers like `build`, `cbuild`, `diag`).
+#
 
 if [[ -n "${_ROS2_PROJECTS_WS_ENV_LOADED:-}" ]]; then
     return
@@ -13,7 +22,7 @@ export ROS2_PROJECTS_WS_ROOT="$(cd "$script_dir/.." && pwd)"
 export ROS_DISTRO="${ROS_DISTRO:-humble}"
 export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-0}"
 
-# Prevent stale overlays from a different ROS distro leaking into this shell.
+# Prevent overlays from a different ROS distro leaking into this shell.
 unset AMENT_PREFIX_PATH
 unset CMAKE_PREFIX_PATH
 unset COLCON_PREFIX_PATH
@@ -22,9 +31,8 @@ if [ -f "/opt/ros/$ROS_DISTRO/local_setup.bash" ]; then
     source "/opt/ros/$ROS_DISTRO/local_setup.bash"
 fi
 
-# GUI over SSH: set DISPLAY + a non-empty XAUTHORITY so X11 clients can authenticate to the
-# local desktop (avoids "Authorization required, but no authorization protocol specified").
-# Disable: export ROS2_AUTO_LOCAL_DISPLAY=0
+# Optional GUI over SSH: auto-select `DISPLAY` and `XAUTHORITY` for local X11 sockets.
+# Disable with: `export ROS2_AUTO_LOCAL_DISPLAY=0`
 _ros2_pick_xauthority() {
     local _cand
     shopt -s nullglob
