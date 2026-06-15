@@ -1,98 +1,139 @@
-# Knml Workspace
+# ROS2 Projects Workspace
 
-ROS 2 development environment for the knml_rover
+Minimal ROS 2 workspace tooling with:
+- one launcher: `./scripts/distrobox <humble|jazzy>`
+- one env file loaded automatically in container shells
+- one build macro: `build`
 
 ## Prerequisites
 
-If you wish to use a Docker container:
-- [Docker](https://www.docker.com) or alternatively [Podman](https://podman.io)
+- [Docker](https://www.docker.com) or [Podman](https://podman.io)
 - [Distrobox](https://github.com/89luca89/distrobox)
+- `rosdep`, `colcon`, `python3-pip` available in container image
 
-If you wish to develop natively on your Ubuntu Jammy:
-- [ROS 2 Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debians.html)
-- [Python 3](https://www.python.org) along with `python-is-python3`
+## Git submodules
 
-## Getting Started
+If this repository uses **git submodules** (for example under `src/`), initialize them after clone or submodule directories will stay empty.
 
-Firstly clone the repository on your machine:
+**Fresh clone (fetch submodules in one step):**
+
 ```bash
-git clone --recurse-submodules git@github.com:knmlprz/knml_ws.git
+git clone --recurse-submodules <repository-url>
 ```
 
-If you have already cloned without `--recurse-submodules`, use:
+**Already cloned without submodules:**
+
 ```bash
+cd ros2_projects_ws
 git submodule update --init --recursive
 ```
 
-### Containerized Development
-
-To enter the ROS 2 shell, run this automated script:
-```bash
-./scripts/distrobox
-```
-A new distrobox will be created and you will be logged in automatically.
-
-After the initial setup of your container is done, you will be able to use ROS 2 and graphical tools such as Rviz and Rqt.
-
-#### Building the Workspace
-
-This repository includes `knml_robot` repository as a submodule, but it might not always be up to date.
-Therefore, after your distrobox is ready, you should pull the latest changes from the remote repository:
+**Update after `git pull`:**
 
 ```bash
-cd src/knml_robot
-git checkout main
-git pull
-cd ../..
+git pull --recurse-submodules
+# or if submodule pointers moved:
+git submodule update --init --recursive
 ```
 
-Now you can build the workspace. `knml_ws` provides a useful macro that can be used to automate this process. It can be typed right into the terminal:
+Optional: make a plain `git pull` recurse into submodules:
 
 ```bash
+git config --global submodule.recurse true
+```
+
+## Start Container
+
+Run one of:
+
+```bash
+./scripts/distrobox humble
+./scripts/distrobox jazzy
+```
+
+What this does:
+- creates/enters distro-specific container (`ros2_projects_ws_<distro>`)
+- appends env hook to container `~/.bashrc` (idempotent)
+- auto-loads `scripts/ros2_env.bash` in every new terminal inside container
+
+`ros2_env.bash` sets:
+- `ROS_DISTRO`
+- `ROS_DOMAIN_ID` (default `0`, unless already set)
+- `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp`
+- `CYCLONEDDS_URI=file://.../scripts/cyclone-dds.xml`
+- source `/opt/ros/$ROS_DISTRO/local_setup.bash`
+- source `scripts/macros.bash` (contains `build`)
+- if `DISPLAY` is empty and a local X11 socket exists (`/tmp/.X11-unix/X0` or `X1`), sets `DISPLAY` and searches for a non-empty **`XAUTHORITY`** file so GUI tools over **SSH** can show on the **Pi’s monitor** (see below)
+
+## GUI over SSH (window on the Pi’s screen)
+
+SSH does not set `DISPLAY` by default, so Qt/RViz would try to open no display. `ros2_env.bash` picks a local X11 socket (`:0` / `:1`) and tries common **`XAUTHORITY`** locations (e.g. `~/.Xauthority`, GDM/LightDM paths under `/run/user/…`, Mutter XWayland cookies) so clients authenticate correctly. Use the **same Linux user** as the graphical login when possible.
+
+```bash
+ros2 launch teleop_bringup g1_arm_control.launch.py use_gui:=true
+```
+
+If you see **“Authorization required, but no authorization protocol specified”**, the cookie file was not found automatically. On the Pi’s **local desktop** terminal (logged-in session), run `echo $XAUTHORITY` and copy that path into your SSH session: `export XAUTHORITY=/that/path`. Alternatively relax local access (less secure):
+
+```bash
+xhost +SI:localuser:$(whoami)
+```
+
+If you still see *cannot open display* / *X11 connection rejected*, try the same `xhost` line on the desktop.
+
+Pure Wayland-only sessions may need XWayland or different setup; this targets the common X11-on-`:0` case.
+
+To turn off automatic `DISPLAY` / `XAUTHORITY` selection (e.g. headless image with a stale socket): `export ROS2_AUTO_LOCAL_DISPLAY=0` before sourcing, or in the shell profile.
+
+## Build Macro
+
+`build` is the only macro and runs in the **current working directory**.
+
+Requirements for `build`:
+- current directory must contain `./src`
+- ROS packages are discovered from `./src`
+
+What `build` does:
+1. `rosdep install --from-paths ./src ...`
+2. installs extra apt dependencies from `apt_packages.txt` in package folders
+3. installs extra pip dependencies from `requirements.txt` in package folders
+4. runs `colcon build --base-paths ./src`
+5. uses distro-scoped artifacts:
+   - `build_<ROS_DISTRO>`
+   - `install_<ROS_DISTRO>`
+   - `log_<ROS_DISTRO>`
+
+Examples:
+
+```bash
+# Build all packages found in ./src
 build
+
+# Build selected packages (exact colcon package names)
+build my_pkg another_pkg
 ```
 
-Running this command will install all rosdeps, custom APT/PIP dependencies, build the workspace, source it, and configure Visual Studio Code for you.
-Visual Studio Code is configured by adding IntelliSense paths to `./.vscode/settings.json` and setting up a custom terminal profile, this ensures that every new terminal that you open within Visual Studio Code will automatically enter the distrobox so that you can develop on your host machine and seamlessly run the code in a container.
+## Diagnostic Macro
 
-After the workspace is built, please visit [knml_robot](https://github.com/knmlprz/knml_rover/tree/main#) repository for instructions on how to start the robot.
+Use `diag` to quickly print system info and validate environment from `scripts/ros2_env.bash`:
 
-### Native Ubuntu Development
+```bash
+diag
+```
 
-If you do not wish to use a container, you can still make use of most of the features offered by `knml_ws`.
-- In order to setup your environment, you should first instal all the necessary dependencies listed in the corresponding subsection of [Prerequisites](#prerequisites).
-- After that, you can enable all the macros normally available in Distrobox by sourcing the `./scripts/setup.bash` script from a Bash shell.
-For deployment, this script should be sourced from within the `.bashrc` file.
-
-In this alternate configuration Visual Studio Code's terminal profile will be configured to open a new Bash shell and source `./scripts/setup.bash` on entry.
-
-
-## Custom Macros
-
-- `build` - Pull from rosdep and build the workspace, then source its setup script. Additionally, Visual Studio Code is automatically configured for ease of use.
-- `clean` - Remove build artifacts from the workspace.
-- `format` - Run `clang-format` and `black` on all packages in the workspace.
-
-See: [macros.bash](/scripts/macros.bash)
-
-## Coding Guidelines
-
-- Make sure that your Colcon packages do not depend on this workspace repository. This includes for instance referring to environment variables exported by the setup scripts or assuming that your package will always be located under `src/`.
+It checks:
+- ROS/Cyclone variables are present
+- `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp`
+- `CYCLONEDDS_URI` points to workspace `scripts/cyclone-dds.xml`
+- env load marker (`_ROS2_PROJECTS_WS_ENV_LOADED`) is set
 
 ## Project Structure
 
 ```yaml
-├─ .distrobox/            # Distrobox home directory (ignored)
-├─ .vscode/               # Visual Studio Code configuration (ignored)
-├─ build/                 # ROS 2 build artifacts (ignored)
-├─ install/               # ROS 2 install artifacts (ignored)
-├─ log/                   # ROS 2 runtime artifacts (ignored)
-├─ scripts/               # The implementation of the workspace
-│  ├─ .bashrc             # Knml dev env Bash overlay; Can be sourced both from Distrobox or from a standalone system.
-│  ├─ configure_vscode.py # Visual Studio auto-complete configuration script; called from macros.bash
-│  ├─ Dockerfile          # ROS 2 (Desktop) image recipe; Does not assume Distrobox.
-│  ├─ distrobox           # Distrobox launch script
-│  └─ macros.bash         # Implements useful development macros; included by .bashrc
-└─ src/                   # the package directory
-   └─ knml_robot/       # a single submodule for all packages that make up Knml's software stack
+scripts/
+  distrobox
+  ros2_env.bash
+  macros.bash
+  cyclone-dds.xml
+src/
 ```

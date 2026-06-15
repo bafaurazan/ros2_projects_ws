@@ -1,3 +1,0 @@
-[submodule "src/knml_rover"]
-	path = src/knml_rover
-	url = git@github.com:knmlprz/knml_rover.git
