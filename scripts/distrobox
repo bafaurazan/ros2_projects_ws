@@ -92,8 +92,13 @@ setup_container_home() {
         touch "$DISTROBOX_HOME/.sudo_as_admin_successful"
     fi
 
-    [[ ! -e "$DISTROBOX_HOME/.gitconfig" && -e "$HOME/.gitconfig" ]] && ln -s "$HOME/.gitconfig" "$DISTROBOX_HOME/.gitconfig"
-    [[ ! -e "$DISTROBOX_HOME/.ssh" && -e "$HOME/.ssh" ]] && ln -s "$HOME/.ssh" "$DISTROBOX_HOME/.ssh"
+    if [[ ! -e "$DISTROBOX_HOME/.gitconfig" && -e "$HOME/.gitconfig" ]]; then
+        ln -s "$HOME/.gitconfig" "$DISTROBOX_HOME/.gitconfig"
+    fi
+
+    if [[ ! -e "$DISTROBOX_HOME/.ssh" && -e "$HOME/.ssh" ]]; then
+        ln -s "$HOME/.ssh" "$DISTROBOX_HOME/.ssh"
+    fi
 }
 
 # 5. Utworzenie kontenera (jeśli nie istnieje)
