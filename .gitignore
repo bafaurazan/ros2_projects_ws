@@ -11,6 +11,7 @@ __pycache__
 /build
 /install
 /log
+/build_ws
 /build_*
 /install_*
 /log_*
