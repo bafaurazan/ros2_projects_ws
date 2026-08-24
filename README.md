@@ -5,46 +5,40 @@ Minimal ROS 2 workspace tooling with:
 - one env file loaded automatically in container shells
 - one build macro: `build`
 
-## Prerequisites
+## Prerequisites (host)
 
-- [Docker](https://www.docker.com) or [Podman](https://podman.io)
-- [Distrobox](https://github.com/89luca89/distrobox)
-- `rosdep`, `colcon`, `python3-pip` available in container image
+Install these on the **host** (outside the container):
 
-## Git submodules
+| Dependency | Why |
+|---|---|
+| [Docker](https://www.docker.com) **or** [Podman](https://podman.io) | Container runtime used by Distrobox |
+| [Distrobox](https://github.com/89luca89/distrobox) | Creates/enters ROS containers |
+| `flatpak` | Used by Distrobox tooling; `./scripts/distrobox` installs it via apt if missing |
+| `fuse-overlayfs` | Required for rootless Podman with large images; installed automatically when Podman is detected |
 
-If this repository uses **git submodules** (for example under `src/`), initialize them after clone or submodule directories will stay empty.
-
-**Fresh clone (fetch submodules in one step):**
-
-```bash
-git clone --recurse-submodules <repository-url>
-```
-
-**Already cloned without submodules:**
+Example (Ubuntu/Debian host):
 
 ```bash
-cd ros2_projects_ws
-git submodule update --init --recursive
+# Container runtime — pick one
+sudo apt install docker.io
+# or
+sudo apt install podman
+
+sudo apt install distrobox flatpak
+# Podman only:
+sudo apt install fuse-overlayfs
 ```
 
-**Update after `git pull`:**
+You do **not** need to install ROS, `colcon`, or `rosdep` on the host — they come from the container image.
 
-```bash
-git pull --recurse-submodules
-# or if submodule pointers moved:
-git submodule update --init --recursive
-```
-
-Optional: make a plain `git pull` recurse into submodules:
-
-```bash
-git config --global submodule.recurse true
-```
+Inside the container, `./scripts/distrobox` also ensures:
+- ROS image (`osrf/ros:<distro>-desktop-full` on x86_64, `arm64v8/ros:<distro>-ros-base` on aarch64)
+- `ros-<distro>-rmw-cyclonedds-cpp`
+- basic tools (`git`, `python3-pip`, `vim`, USB utils, …)
 
 ## Start Container
 
-Run one of:
+From the workspace root:
 
 ```bash
 ./scripts/distrobox humble
@@ -52,88 +46,109 @@ Run one of:
 ```
 
 What this does:
-- creates/enters distro-specific container (`ros2_projects_ws_<distro>`)
-- appends env hook to container `~/.bashrc` (idempotent)
-- auto-loads `scripts/ros2_env.bash` in every new terminal inside container
+- creates (if needed) and enters container `ros2_projects_ws_<distro>`
+- uses an isolated home under `.distrobox_<distro>/`
+- appends an env hook to container `~/.bashrc` (idempotent)
+- auto-loads `scripts/ros2_env.bash` in every new interactive shell inside the container
 
 `ros2_env.bash` sets:
 - `ROS_DISTRO`
 - `ROS_DOMAIN_ID` (default `0`, unless already set)
 - `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp`
 - `CYCLONEDDS_URI=file://.../scripts/cyclone-dds.xml`
-- source `/opt/ros/$ROS_DISTRO/local_setup.bash`
-- source `scripts/macros.bash` (contains `build`)
-- if `DISPLAY` is empty and a local X11 socket exists (`/tmp/.X11-unix/X0` or `X1`), sets `DISPLAY` and searches for a non-empty **`XAUTHORITY`** file so GUI tools over **SSH** can show on the **Pi’s monitor** (see below)
-
-## GUI over SSH (window on the Pi’s screen)
-
-SSH does not set `DISPLAY` by default, so Qt/RViz would try to open no display. `ros2_env.bash` picks a local X11 socket (`:0` / `:1`) and tries common **`XAUTHORITY`** locations (e.g. `~/.Xauthority`, GDM/LightDM paths under `/run/user/…`, Mutter XWayland cookies) so clients authenticate correctly. Use the **same Linux user** as the graphical login when possible.
-
-```bash
-ros2 launch teleop_bringup g1_arm_control.launch.py use_gui:=true
-```
-
-If you see **“Authorization required, but no authorization protocol specified”**, the cookie file was not found automatically. On the Pi’s **local desktop** terminal (logged-in session), run `echo $XAUTHORITY` and copy that path into your SSH session: `export XAUTHORITY=/that/path`. Alternatively relax local access (less secure):
-
-```bash
-xhost +SI:localuser:$(whoami)
-```
-
-If you still see *cannot open display* / *X11 connection rejected*, try the same `xhost` line on the desktop.
-
-Pure Wayland-only sessions may need XWayland or different setup; this targets the common X11-on-`:0` case.
-
-To turn off automatic `DISPLAY` / `XAUTHORITY` selection (e.g. headless image with a stale socket): `export ROS2_AUTO_LOCAL_DISPLAY=0` before sourcing, or in the shell profile.
+- sources `/opt/ros/$ROS_DISTRO/local_setup.bash`
+- sources `scripts/macros.bash` (`build`, `cbuild`, `diag`)
 
 ## Build Macro
 
-`build` is the only macro and runs in the **current working directory**.
+`build` is the main helper. It always operates on the **current working directory** — that directory must contain `./src` with ROS packages.
 
-Requirements for `build`:
-- current directory must contain `./src`
-- ROS packages are discovered from `./src`
-
-What `build` does:
-1. `rosdep install --from-paths ./src ...`
-2. installs extra apt dependencies from `apt_packages.txt` in package folders
-3. installs extra pip dependencies from `requirements.txt` in package folders
-4. runs `colcon build --base-paths ./src`
-5. uses distro-scoped artifacts:
-   - `build_<ROS_DISTRO>`
-   - `install_<ROS_DISTRO>`
-   - `log_<ROS_DISTRO>`
-
-Examples:
+### Usage
 
 ```bash
-# Build all packages found in ./src
+# Full bootstrap + build of everything under ./src
 build
 
-# Build selected packages (exact colcon package names)
+# Build selected packages only (exact colcon package names)
 build my_pkg another_pkg
+
+# Skip dependency installation; only run colcon
+build --no-deps
+build --no-deps my_pkg
+```
+
+Any arguments after an optional `--no-deps` are forwarded to `colcon build` (e.g. package names, `--packages-up-to`, `--cmake-args`, …).
+
+### Step-by-step: what `build` does
+
+1. **Guard** — fails if `./src` is missing in the current directory.
+
+2. **Dependencies** (unless `--no-deps`):
+   - `rosdep update --rosdistro $ROS_DISTRO`
+   - `rosdep install` from `./src` (also scans nested “package clusters”: directories under `./src` that contain ≥2 sibling `package.xml` trees, so vendor layouts still resolve)
+   - installs every package listed in any `apt_packages.txt` found under `./src` (`sudo apt-get install -y …`)
+   - installs every `requirements.txt` found under `./src` (`python3 -m pip install -r …`)
+
+3. **Build** — calls the distro-aware colcon wrapper (same as `cbuild`):
+   - discovers packages with `--base-paths ./src`
+   - uses `--symlink-install`
+   - writes artifacts under `./build_ws/` (per distro, so humble and jazzy do not clash):
+
+     | Path | Role |
+     |---|---|
+     | `build_ws/build_<ROS_DISTRO>/` | build trees |
+     | `build_ws/install_<ROS_DISTRO>/` | install space |
+     | `build_ws/log_<ROS_DISTRO>/` | colcon logs |
+
+4. **Source** — if `build_ws/install_<ROS_DISTRO>/local_setup.bash` exists, sources it into the current shell so newly built packages are immediately usable.
+
+### Related: `cbuild`
+
+`cbuild` is only the colcon step (no rosdep / apt / pip). Same paths and `--symlink-install` behavior as above.
+
+```bash
+cbuild
+cbuild --packages-select my_pkg
+```
+
+### Typical workflow
+
+```bash
+./scripts/distrobox jazzy
+cd path/to/your_ws          # directory that contains ./src
+build                       # deps + build + source install
+# or later, after deps are already installed:
+build --no-deps my_pkg
 ```
 
 ## Diagnostic Macro
-
-Use `diag` to quickly print system info and validate environment from `scripts/ros2_env.bash`:
 
 ```bash
 diag
 ```
 
-It checks:
-- ROS/Cyclone variables are present
-- `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp`
-- `CYCLONEDDS_URI` points to workspace `scripts/cyclone-dds.xml`
-- env load marker (`_ROS2_PROJECTS_WS_ENV_LOADED`) is set
+Prints system/tool info and checks that `ros2_env.bash` loaded correctly (RMW, CycloneDDS URI, env marker, working `cmake`).
 
 ## Project Structure
 
-```yaml
+```text
 scripts/
-  distrobox
-  ros2_env.bash
-  macros.bash
+  distrobox          # host launcher → create/enter container
+  ros2_env.bash      # auto-sourced in container shells
+  macros.bash        # build, cbuild, diag
   cyclone-dds.xml
-src/
+src/                 # put / link ROS workspaces here
+build_ws/            # created by build (gitignored artifacts)
+```
+
+## GUI over SSH (window on the Pi’s screen)
+
+SSH does not set `DISPLAY` by default. `ros2_env.bash` can pick a local X11 socket (`:0` / `:1`) and a non-empty `XAUTHORITY` so GUI tools (RViz, Qt) open on the machine’s monitor. Prefer the **same Linux user** as the graphical login.
+
+Disable auto-selection: `export ROS2_AUTO_LOCAL_DISPLAY=0`.
+
+If you see **“Authorization required, but no authorization protocol specified”**, set `XAUTHORITY` from the local desktop session (`echo $XAUTHORITY`), or on the desktop:
+
+```bash
+xhost +SI:localuser:$(whoami)
 ```
