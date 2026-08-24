@@ -61,9 +61,18 @@ build() {
         done < <(find ./src -type f -name apt_packages.txt)
 
         echo "Installing additional PIP dependencies..."
+        # Ubuntu 24.04+/Jazzy mark the system Python as PEP 668 "externally managed".
+        # In our distrobox containers, allow installing requirements into the user/system
+        # site without forcing every package onto apt or a separate venv.
+        local pip_args=(-r)
+        local py_stdlib
+        py_stdlib="$(python3 -c 'import sysconfig; print(sysconfig.get_path("stdlib"))' 2>/dev/null || true)"
+        if [[ -n "$py_stdlib" && -f "${py_stdlib}/EXTERNALLY-MANAGED" ]]; then
+            pip_args=(--break-system-packages -r)
+        fi
         while IFS= read -r req_file; do
             [ -n "$req_file" ] || continue
-            python3 -m pip install -r "$req_file"
+            python3 -m pip install "${pip_args[@]}" "$req_file"
         done < <(find ./src -type f -name requirements.txt)
     else
         echo "Skipping dependency installation (--no-deps)."

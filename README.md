@@ -87,7 +87,7 @@ Any arguments after an optional `--no-deps` are forwarded to `colcon build` (e.g
    - `rosdep update --rosdistro $ROS_DISTRO`
    - `rosdep install` from `./src` (also scans nested “package clusters”: directories under `./src` that contain ≥2 sibling `package.xml` trees, so vendor layouts still resolve)
    - installs every package listed in any `apt_packages.txt` found under `./src` (`sudo apt-get install -y …`)
-   - installs every `requirements.txt` found under `./src` (`python3 -m pip install -r …`)
+   - installs every `requirements.txt` found under `./src` (`python3 -m pip install -r …`; on PEP 668 / Ubuntu 24.04+ uses `--break-system-packages` so installs work inside the container)
 
 3. **Build** — calls the distro-aware colcon wrapper (same as `cbuild`):
    - discovers packages with `--base-paths ./src`
