@@ -23,11 +23,11 @@ build() {
         shift
     fi
 
-    local ros_distro_name="${ROS_DISTRO:-humble}"
+    local ros2_distro_name="${ROS_DISTRO:-humble}"
 
     if [ "$install_deps" -eq 1 ]; then
         echo "Updating rosdep index..."
-        rosdep update --rosdistro "$ros_distro_name"
+        rosdep update --rosdistro "$ros2_distro_name"
 
         echo "Installing rosdep dependencies..."
         # Some repos nest multiple sibling packages below a non-`./src` directory (e.g. `./src/vendor/foo/pkg_a`,
@@ -47,7 +47,7 @@ build() {
             rosdep_paths+=("$d")
         done < <(find ./src -type d -print0)
 
-        rosdep install --rosdistro "$ros_distro_name" --default-yes \
+        rosdep install --rosdistro "$ros2_distro_name" --default-yes \
             --ignore-packages-from-source -r --from-paths "${rosdep_paths[@]}"
 
         echo "Installing additional APT dependencies..."
@@ -85,16 +85,16 @@ colcon_build_distro() {
         return 1
     fi
 
-    local ros_distro_name="${ROS_DISTRO:-humble}"
+    local ros2_distro_name="${ROS_DISTRO:-humble}"
     local workspace_artifacts_dir="build_ws"
-    local build_base="${workspace_artifacts_dir}/build_${ros_distro_name}"
-    local install_base="${workspace_artifacts_dir}/install_${ros_distro_name}"
-    local log_base="${workspace_artifacts_dir}/log_${ros_distro_name}"
+    local build_base="${workspace_artifacts_dir}/build_${ros2_distro_name}"
+    local install_base="${workspace_artifacts_dir}/install_${ros2_distro_name}"
+    local log_base="${workspace_artifacts_dir}/log_${ros2_distro_name}"
 
     mkdir -p "$workspace_artifacts_dir"
 
-    _ros2_sanitize_overlay_paths
-    _ros2_prefer_system_cmake
+    sanitize_overlay_paths
+    prefer_current_env_cmake
 
     colcon --log-base "$log_base" build \
         --base-paths "./src" \

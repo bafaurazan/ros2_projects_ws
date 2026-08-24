@@ -1,5 +1,8 @@
 __pycache__
 
+# cursor
+.cursor
+
 # Distrobox home directory
 /.distrobox*
 
