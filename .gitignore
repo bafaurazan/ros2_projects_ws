@@ -1,5 +1,8 @@
 __pycache__
 
+# cursor
+.cursor
+
 # Distrobox home directory
 /.distrobox*
 
@@ -11,6 +14,7 @@ __pycache__
 /build
 /install
 /log
+/build_ws
 /build_*
 /install_*
 /log_*

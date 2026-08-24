@@ -7,7 +7,7 @@
 #
 # What you get:
 # - `build [<pkg> ...]`: "bootstrap + build" helper for a ROS2 workspace.
-# - `cbuild [colcon args...]`: distro-aware `colcon build` that writes to build_<distro>/install_<distro>/log_<distro>.
+# - `cbuild [colcon args...]`: distro-aware `colcon build` that writes to build_ws/build_<distro>/install_<distro>/log_<distro>.
 # - `diag`: quick environment sanity checks (CycloneDDS/RMW + paths).
 #
 
@@ -23,14 +23,11 @@ build() {
         shift
     fi
 
-    local ros_distro_name="${ROS_DISTRO:-humble}"
-    local build_base="build_${ros_distro_name}"
-    local install_base="install_${ros_distro_name}"
-    local log_base="log_${ros_distro_name}"
+    local ros2_distro_name="${ROS_DISTRO:-humble}"
 
     if [ "$install_deps" -eq 1 ]; then
         echo "Updating rosdep index..."
-        rosdep update --rosdistro "$ros_distro_name"
+        rosdep update --rosdistro "$ros2_distro_name"
 
         echo "Installing rosdep dependencies..."
         # Some repos nest multiple sibling packages below a non-`./src` directory (e.g. `./src/vendor/foo/pkg_a`,
@@ -50,7 +47,7 @@ build() {
             rosdep_paths+=("$d")
         done < <(find ./src -type d -print0)
 
-        rosdep install --rosdistro "$ros_distro_name" --default-yes \
+        rosdep install --rosdistro "$ros2_distro_name" --default-yes \
             --ignore-packages-from-source -r --from-paths "${rosdep_paths[@]}"
 
         echo "Installing additional APT dependencies..."
@@ -81,17 +78,23 @@ colcon_build_distro() {
     #   cbuild [colcon build args...]
     #   colcon_build_distro [colcon build args...]
     #
-    # Uses `ROS_DISTRO` to keep build/install/log outputs separate per distro:
-    #   build_<distro>/ install_<distro>/ log_<distro>/
+    # Uses `ROS_DISTRO` to keep build/install/log outputs separate per distro under ./build_ws/:
+    #   build_ws/build_<distro>/ install_<distro>/ log_<distro>/
     if [ ! -d "./src" ]; then
         echo "Missing ./src in current directory: $(pwd)"
         return 1
     fi
 
-    local ros_distro_name="${ROS_DISTRO:-humble}"
-    local build_base="build_${ros_distro_name}"
-    local install_base="install_${ros_distro_name}"
-    local log_base="log_${ros_distro_name}"
+    local ros2_distro_name="${ROS_DISTRO:-humble}"
+    local workspace_artifacts_dir="build_ws"
+    local build_base="${workspace_artifacts_dir}/build_${ros2_distro_name}"
+    local install_base="${workspace_artifacts_dir}/install_${ros2_distro_name}"
+    local log_base="${workspace_artifacts_dir}/log_${ros2_distro_name}"
+
+    mkdir -p "$workspace_artifacts_dir"
+
+    sanitize_overlay_paths
+    prefer_current_env_cmake
 
     colcon --log-base "$log_base" build \
         --base-paths "./src" \
@@ -135,6 +138,8 @@ diag() {
     command -v ros2 >/dev/null 2>&1 && echo "ros2: $(command -v ros2)" || echo "ros2: not found"
     command -v colcon >/dev/null 2>&1 && echo "colcon: $(command -v colcon)" || echo "colcon: not found"
     command -v rosdep >/dev/null 2>&1 && echo "rosdep: $(command -v rosdep)" || echo "rosdep: not found"
+    command -v cmake >/dev/null 2>&1 && echo "cmake: $(command -v cmake)" || echo "cmake: not found"
+    echo "CMAKE_COMMAND=${CMAKE_COMMAND:-<unset>}"
     echo
 
     echo "=== Environment ==="
@@ -179,6 +184,20 @@ diag() {
         echo "[OK] ros2_env.bash load marker is set"
     else
         echo "[FAIL] ros2_env.bash load marker is not set"
+        ok=false
+    fi
+
+    if command -v cmake >/dev/null 2>&1 && cmake --version >/dev/null 2>&1; then
+        echo "[OK] cmake works ($(command -v cmake))"
+    else
+        echo "[FAIL] cmake is missing or broken"
+        ok=false
+    fi
+
+    if [[ "${CMAKE_COMMAND:-}" == /usr/bin/cmake ]]; then
+        echo "[OK] CMAKE_COMMAND points to system cmake"
+    elif [[ -x /usr/bin/cmake ]]; then
+        echo "[FAIL] CMAKE_COMMAND should be /usr/bin/cmake"
         ok=false
     fi
 
