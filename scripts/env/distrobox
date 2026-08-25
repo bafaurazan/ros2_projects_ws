@@ -3,28 +3,28 @@
 set -euo pipefail
 
 # ==============================================================================
-# "WŁAŚCIWOŚCI OBIEKTU" (Zmienne globalne i konfiguracja)
+# Configuration (global variables)
 # ==============================================================================
 ROS_DISTRO="${1:-${ROS_DISTRO:-humble}}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-WS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+WS_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 CONTAINER_NAME="ros2_projects_ws_${ROS_DISTRO}"
 DISTROBOX_HOME="${WS_DIR}/.distrobox_${ROS_DISTRO}"
-ENV_HOST_PATH="/run/host${WS_DIR}/scripts/ros2_env.bash"
+ENV_HOST_PATH="/run/host${WS_DIR}/scripts/env/auto_setup.bash"
 
 ROS_IMAGE=""
 ADDITIONAL_PACKAGES="iputils-ping nano vim alsa-utils alsa pulseaudio git git-man python3 python-is-python3 python3-pip usbutils"
 
 # ==============================================================================
-# "METODY" (Pojedyncze bloki logiki)
+# Functions
 # ==============================================================================
 
-# 1. Walidacja wejścia i ustalenie architektury
+# 1. Validate input and select image for host architecture
 validate_and_set_architecture() {
     if [[ "$ROS_DISTRO" != "humble" && "$ROS_DISTRO" != "jazzy" ]]; then
-        echo "❌ Błąd: Nieobsługiwana wersja ROS: $ROS_DISTRO"
-        echo "Użycie: $0 [humble|jazzy]"
+        echo "❌ Error: Unsupported ROS distro: $ROS_DISTRO"
+        echo "Usage: ./scripts/setup.bash [humble|jazzy|host]"
         exit 1
     fi
 
@@ -34,43 +34,43 @@ validate_and_set_architecture() {
 
     local host_arch
     host_arch="$(uname -m)"
-    
+
     case "$host_arch" in
         x86_64|amd64) ROS_IMAGE="${ROS_DOCKER_IMAGE:-docker.io/osrf/ros:${ROS_DISTRO}-desktop-full}" ;;
         aarch64|arm64) ROS_IMAGE="${ROS_DOCKER_IMAGE:-docker.io/arm64v8/ros:${ROS_DISTRO}-ros-base}" ;;
         armv7l|armhf)  ROS_IMAGE="${ROS_DOCKER_IMAGE:-docker.io/arm32v7/ros:${ROS_DISTRO}-ros-base}" ;;
         *)
-            echo "❌ Błąd: Nieobsługiwana architektura '$host_arch'."
+            echo "❌ Error: Unsupported architecture '$host_arch'."
             exit 1
             ;;
     esac
 }
 
-# 2. Instalacja zależności na hoście (Flatpak, Fuse)
+# 2. Install host dependencies (Flatpak, Fuse)
 install_host_dependencies() {
     if ! command -v distrobox >/dev/null 2>&1; then
-        echo "❌ Błąd: distrobox nie jest zainstalowany (lub brak w PATH)."
+        echo "❌ Error: distrobox is not installed (or not in PATH)."
         exit 1
     fi
 
     if ! command -v flatpak >/dev/null 2>&1; then
-        echo "🛠️ Instalowanie flatpak..."
-        sudo apt-get update && sudo apt-get install -y flatpak || echo "Zainstaluj flatpak ręcznie."
+        echo "🛠️ Installing flatpak..."
+        sudo apt-get update && sudo apt-get install -y flatpak || echo "Install flatpak manually."
     fi
 }
 
-# 3. Fix dla Podmana (wymuszenie fuse-overlayfs dla dużych obrazów)
+# 3. Podman rootless fix (fuse-overlayfs for large images)
 apply_podman_rootless_fix() {
     if command -v podman >/dev/null 2>&1; then
         local storage_conf="$HOME/.config/containers/storage.conf"
 
         if ! command -v fuse-overlayfs >/dev/null 2>&1; then
-            echo "🛠️ Instalowanie 'fuse-overlayfs' (wymagane przez Podman)..."
+            echo "🛠️ Installing fuse-overlayfs (required by Podman)..."
             sudo apt-get update && sudo apt-get install -y fuse-overlayfs || true
         fi
 
         if [[ ! -f "$storage_conf" ]] || ! grep -q "fuse-overlayfs" "$storage_conf"; then
-            echo "⚙️ Aplikowanie konfiguracji storage dla Podmana..."
+            echo "⚙️ Applying Podman storage configuration..."
             mkdir -p "$(dirname "$storage_conf")"
             cat <<EOF > "$storage_conf"
 [storage]
@@ -80,12 +80,12 @@ driver = "overlay"
 mount_program = "/usr/bin/fuse-overlayfs"
 EOF
             podman system reset -f >/dev/null 2>&1 || true
-            echo "✅ Fix dla Podmana zastosowany."
+            echo "✅ Podman fix applied."
         fi
     fi
 }
 
-# 4. Przygotowanie izolowanego folderu domowego i dowiązań
+# 4. Prepare isolated container home and symlinks
 setup_container_home() {
     if [[ ! -d "$DISTROBOX_HOME" ]]; then
         mkdir -p "$DISTROBOX_HOME"
@@ -101,7 +101,7 @@ setup_container_home() {
     fi
 }
 
-# 5. Utworzenie kontenera (jeśli nie istnieje)
+# 5. Create container if it does not exist
 create_container_if_missing() {
     local container_exists=0
     if distrobox list --no-color | tr -s ' ' | cut -d ' ' -f 3 | tail -n +2 | grep -q "^${CONTAINER_NAME}$"; then
@@ -109,8 +109,8 @@ create_container_if_missing() {
     fi
 
     if [[ "$container_exists" -eq 0 ]]; then
-        echo "🚀 Tworzenie instancji Distrobox ($CONTAINER_NAME)..."
-        echo "📦 Używany obraz: $ROS_IMAGE"
+        echo "🚀 Creating Distrobox instance ($CONTAINER_NAME)..."
+        echo "📦 Using image: $ROS_IMAGE"
 
         local nvidia_flag=""
         if command -v lspci >/dev/null 2>&1 && lspci | grep -qi nvidia; then
@@ -136,10 +136,10 @@ create_container_if_missing() {
     fi
 }
 
-# 6. Konfiguracja wnętrza kontenera (ROS Env, CycloneDDS)
+# 6. Configure container internals (ROS env, CycloneDDS)
 configure_container_internals() {
     distrobox enter "$CONTAINER_NAME" -- bash -lc "
-        # Wstrzyknięcie środowiska
+        # Inject workspace environment into shell startup
         if ! grep -q 'BEGIN ROS2_PROJECTS_WS_ENV' \"\$HOME/.bashrc\" 2>/dev/null; then
             cat >> \"\$HOME/.bashrc\" <<EOF
 
@@ -152,26 +152,26 @@ fi
 EOF
         fi
 
-        # Instalacja CycloneDDS
+        # Install CycloneDDS RMW
         if command -v apt-get >/dev/null 2>&1; then
             pkg=\"ros-${ROS_DISTRO}-rmw-cyclonedds-cpp\"
             if ! dpkg -s \"\$pkg\" >/dev/null 2>&1; then
-                echo \"📦 Instalowanie \$pkg wewnątrz kontenera...\"
+                echo \"📦 Installing \$pkg inside the container...\"
                 sudo apt-get update
-                sudo apt-get install -y \"\$pkg\" || echo \"⚠️ Ostrzeżenie: Nie udało się zainstalować \$pkg.\"
+                sudo apt-get install -y \"\$pkg\" || echo \"⚠️ Warning: Failed to install \$pkg.\"
             fi
         fi
     "
 }
 
-# 7. Wejście do gotowego środowiska
+# 7. Enter the ready environment
 enter_container() {
-    echo "✅ Środowisko gotowe. Wchodzenie do kontenera..."
+    echo "✅ Environment ready. Entering container..."
     distrobox enter "$CONTAINER_NAME" -- /usr/bin/bash -i
 }
 
 # ==============================================================================
-# "MAIN" (Orkiestracja - tu widać całą logikę krok po kroku)
+# Main
 # ==============================================================================
 main() {
     validate_and_set_architecture
@@ -180,9 +180,8 @@ main() {
     setup_container_home
     create_container_if_missing
     configure_container_internals
-    
+
     enter_container
 }
 
-# Uruchomienie skryptu
 main

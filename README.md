@@ -1,151 +1,99 @@
 # ROS2 Projects Workspace
 
-Minimal ROS 2 workspace tooling with:
-- one launcher: `./scripts/distrobox <humble|jazzy>`
-- one env file loaded automatically in container shells
-- one build macro: `build`
+Ready-to-use ROS 2 environment in a Distrobox container, plus a shared macro system (`build`, `cbuild`, `diag`, …) — including macros from repositories under `src/`.
 
-## Prerequisites (host)
+- **Entry point:** `./scripts/setup.bash <humble|jazzy|host>`
+- **Macros:** documentation and convention → [scripts/macros/README.md](scripts/macros/README.md)
 
-Install these on the **host** (outside the container):
+## Host requirements
 
-| Dependency | Why |
-|---|---|
-| [Docker](https://www.docker.com) **or** [Podman](https://podman.io) | Container runtime used by Distrobox |
-| [Distrobox](https://github.com/89luca89/distrobox) | Creates/enters ROS containers |
-| `flatpak` | Used by Distrobox tooling; `./scripts/distrobox` installs it via apt if missing |
-| `fuse-overlayfs` | Required for rootless Podman with large images; installed automatically when Podman is detected |
-
-Example (Ubuntu/Debian host):
+Tested with **Podman** and **Distrobox** (curl install):
 
 ```bash
-# Container runtime — pick one
-sudo apt install docker.io
-# or
 sudo apt install podman
-
-sudo apt install distrobox flatpak
-# Podman only:
-sudo apt install fuse-overlayfs
+curl -fsSL https://raw.githubusercontent.com/89luca89/distrobox/legacy/install | sh
 ```
 
-You do **not** need to install ROS, `colcon`, or `rosdep` on the host — they come from the container image.
+You do not need ROS, `colcon`, or `rosdep` on the host — they come from the container.
 
-Inside the container, `./scripts/distrobox` also ensures:
-- ROS image (`osrf/ros:<distro>-desktop-full` on x86_64, `arm64v8/ros:<distro>-ros-base` on aarch64)
-- `ros-<distro>-rmw-cyclonedds-cpp`
-- basic tools (`git`, `python3-pip`, `vim`, USB utils, …)
-
-## Start Container
+## Start
 
 From the workspace root:
 
 ```bash
-./scripts/distrobox humble
-./scripts/distrobox jazzy
+./scripts/setup.bash humble
+./scripts/setup.bash jazzy
+./scripts/setup.bash host
 ```
 
-What this does:
-- creates (if needed) and enters container `ros2_projects_ws_<distro>`
+`humble` / `jazzy` create (if needed) and enter container `ros2_projects_ws_<distro>`:
+
+- picks a ROS image (`desktop-full` on x86_64, `ros-base` on arm)
+- installs CycloneDDS RMW, git, pip, USB tools, and related packages in the container
 - uses an isolated home under `.distrobox_<distro>/`
-- appends an env hook to container `~/.bashrc` (idempotent)
-- auto-loads `scripts/ros2_env.bash` in every new interactive shell inside the container
+- hooks `~/.bashrc` to auto-load `scripts/env/auto_setup.bash` (ROS, middleware, macros)
 
-`ros2_env.bash` sets:
-- `ROS_DISTRO`
-- `ROS_DOMAIN_ID` (default `0`, unless already set)
-- `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp`
-- `CYCLONEDDS_URI=file://.../scripts/cyclone-dds.xml`
-- sources `/opt/ros/$ROS_DISTRO/local_setup.bash`
-- sources `scripts/macros.bash` (`build`, `cbuild`, `diag`)
+`host` opens an interactive bash with workspace macros only (no Distrobox / no ROS). Use this on Git Bash for helpers such as `notaura_thesis_build`. `exit` returns to the previous shell.
 
-## Build Macro
+Optional: `source scripts/setup.bash host` loads macros in the current shell instead of opening a new one.
 
-`build` is the main helper. It always operates on the **current working directory** — that directory must contain `./src` with ROS packages.
+Macros: [scripts/macros/README.md](scripts/macros/README.md).
 
-### Usage
+## Work inside the container
+
+1. `./scripts/setup.bash jazzy`
+2. `cd` to a directory that contains `./src`
+3. `build` — dependencies + colcon, or `cbuild` — colcon only
+
+### build
+
+Installs dependencies (rosdep, apt, pip) and builds the workspace.
 
 ```bash
-# Full deps + build of everything under ./src
 build
-
-# Build with extra colcon args (after deps)
-build --packages-select my_pkg another_pkg
+build --packages-select my_pkg
 ```
 
-Any arguments are forwarded to `cbuild` / `colcon build` (e.g. `--packages-select`, `--packages-up-to`, `--cmake-args`, …).
+### cbuild
 
-### Step-by-step: what `build` does
-
-1. **Guard** — fails if `./src` is missing in the current directory.
-
-2. **Dependencies**:
-   - `rosdep update --rosdistro $ROS_DISTRO`
-   - `rosdep install` from `./src` (also scans nested “package clusters”: directories under `./src` that contain ≥2 sibling `package.xml` trees, so vendor layouts still resolve)
-   - installs every package listed in any `apt_packages.txt` found under `./src` (`sudo apt-get install -y …`)
-   - installs every `requirements.txt` under `./src` via pip: prefers `$VIRTUAL_ENV`, then `./.venv` / `./venv`, else system `python3`. System installs on Ubuntu 24.04+ need `--break-system-packages` because PEP 668 blocks plain `pip install` into the distro Python (common with Jazzy; Humble/22.04 usually does not).
-
-3. **Build** — calls `cbuild`:
-   - discovers packages with `--base-paths ./src`
-   - uses `--symlink-install`
-   - writes artifacts under `./build_ws/` (per distro, so humble and jazzy do not clash):
-
-     | Path | Role |
-     |---|---|
-     | `build_ws/build_<ROS_DISTRO>/` | build trees |
-     | `build_ws/install_<ROS_DISTRO>/` | install space |
-     | `build_ws/log_<ROS_DISTRO>/` | colcon logs |
-
-4. **Source** — if `build_ws/install_<ROS_DISTRO>/local_setup.bash` exists, sources it into the current shell so newly built packages are immediately usable.
-
-### Related: `cbuild`
-
-`cbuild` is only the colcon step (no rosdep / apt / pip). Same paths and `--symlink-install` behavior as above.
+Colcon only (no dependency install). Extra arguments are passed to `colcon build`.
 
 ```bash
 cbuild
 cbuild --packages-select my_pkg
 ```
 
-### Typical workflow
+Implementation details: [scripts/macros/README.md](scripts/macros/README.md).
 
-```bash
-./scripts/distrobox jazzy
-cd path/to/your_ws          # directory that contains ./src
-# optional (e.g. RAI): source .venv/bin/activate   # or keep ./.venv in the workspace root
-build                       # deps + build + source install
-# or later, after deps are already installed:
-cbuild --packages-select my_pkg
-```
+### Two `build_ws` directories
 
-## Diagnostic Macro
+- **Root** `$ROS2_PROJECTS_WS_ROOT/build_ws/macros/` — global macro cache (synced from every repo)
+- **Per project** `./build_ws/` in the directory you build — colcon only (`build_*`, `install_*`, `log_*`)
 
-```bash
-diag
-```
+`rm -rf ./build_ws` in a project deletes that project's colcon output; macros stay in the root cache. `diag` lists macros; `sync_macros` re-syncs them.
 
-Prints system/tool info and checks that `ros2_env.bash` loaded correctly (RMW, CycloneDDS URI, env marker, working `cmake`).
+## Macros
 
-## Project Structure
+Convention: each repo keeps `scripts/macros/*.bash` plus `README.md`. After the shell starts, bundles are copied to `$ROS2_PROJECTS_WS_ROOT/build_ws/macros/<repo>/`.
+
+Full documentation, the convention for new repos, and `build` / `cbuild` / `diag` / `sync_macros` → [scripts/macros/README.md](scripts/macros/README.md)
+
+`notaura_thesis_build` and other host-side helpers work with `./scripts/setup.bash host`. ROS `build` / `cbuild` still need Distrobox. Requires `latexmk` or `pdflatex` on the host (MiKTeX / TeX Live) for the thesis.
+
+## Project structure
 
 ```text
 scripts/
-  distrobox          # host launcher → create/enter container
-  ros2_env.bash      # auto-sourced in container shells
-  macros.bash        # build, cbuild, diag
-  cyclone-dds.xml
-src/                 # put / link ROS workspaces here
-build_ws/            # created by build (gitignored artifacts)
-```
-
-## GUI over SSH (window on the Pi’s screen)
-
-SSH does not set `DISPLAY` by default. `ros2_env.bash` can pick a local X11 socket (`:0` / `:1`) and a non-empty `XAUTHORITY` so GUI tools (RViz, Qt) open on the machine’s monitor. Prefer the **same Linux user** as the graphical login.
-
-Disable auto-selection: `export ROS2_AUTO_LOCAL_DISPLAY=0`.
-
-If you see **“Authorization required, but no authorization protocol specified”**, set `XAUTHORITY` from the local desktop session (`echo $XAUTHORITY`), or on the desktop:
-
-```bash
-xhost +SI:localuser:$(whoami)
+  setup.bash            # ./scripts/setup.bash humble|jazzy|host
+  env/
+    distrobox           # container create/enter
+    auto_setup.bash     # sourced from container ~/.bashrc
+    modules/            # ros2.bash, display.bash, cyclone-dds.xml
+  host/
+    setup.bash          # macros only (no ROS)
+  macros/               # build.bash, diag.bash, sync.bash, README.md
+src/                    # subprojects (each may have scripts/macros/)
+build_ws/
+  macros/               # global macro cache (generated by sync)
+  # per-project ./build_ws/ is created in CWD by build/cbuild
 ```

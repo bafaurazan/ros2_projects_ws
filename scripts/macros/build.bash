@@ -1,16 +1,5 @@
 #!/usr/bin/bash
 
-#
-# ROS2 Projects workspace helpers.
-#
-# Sourced by `scripts/ros2_env.bash` inside the container shell.
-#
-# Macros:
-# - `build [colcon args...]` — install deps (rosdep/apt/pip), then run `cbuild`.
-# - `cbuild [colcon args...]` — `colcon build` into ./build_ws/{build,install,log}_<ROS_DISTRO>/.
-# - `diag` — print env/tool sanity checks (RMW, CycloneDDS, cmake, paths).
-#
-
 # Install workspace dependencies (rosdep + apt_packages.txt + requirements.txt), then `cbuild`.
 # Usage: build [colcon build args...]
 build() {
@@ -91,12 +80,16 @@ build() {
     cbuild "$@"
 }
 
-# Runs `colcon build` into ./build_ws/build_<ROS_DISTRO>/, install_*/, log_*/, then sources install.
+# Distro-aware `colcon build`: writes to ./build_ws/build_<ROS_DISTRO>/, install_*/, log_*/, then sources install.
 # Usage: cbuild [colcon build args...]
 cbuild() {
     if [ ! -d "./src" ]; then
         echo "Missing ./src in current directory: $(pwd)"
         return 1
+    fi
+
+    if declare -F sync_macros >/dev/null 2>&1; then
+        sync_macros || return 1
     fi
 
     local ros2_distro_name="${ROS_DISTRO:-humble}"
@@ -114,7 +107,6 @@ cbuild() {
         --base-paths "./src" \
         --build-base "$build_base" \
         --install-base "$install_base" \
-        --symlink-install \
         "$@"
 
     if [ -f "./${install_base}/local_setup.bash" ]; then
@@ -131,94 +123,4 @@ cbuild() {
     fi
 
     echo "Done."
-}
-
-# Print system/tools/env info and verify ros2_env.bash settings (RMW, CycloneDDS, cmake).
-diag() {
-    echo "=== System ==="
-    if command -v lsb_release >/dev/null 2>&1; then
-        lsb_release -a 2>/dev/null || true
-    elif [ -f /etc/os-release ]; then
-        cat /etc/os-release
-    else
-        echo "No lsb_release or /etc/os-release available."
-    fi
-    echo "Kernel: $(uname -srmo)"
-    echo
-
-    echo "=== Tools ==="
-    command -v ros2 >/dev/null 2>&1 && echo "ros2: $(command -v ros2)" || echo "ros2: not found"
-    command -v colcon >/dev/null 2>&1 && echo "colcon: $(command -v colcon)" || echo "colcon: not found"
-    command -v rosdep >/dev/null 2>&1 && echo "rosdep: $(command -v rosdep)" || echo "rosdep: not found"
-    command -v cmake >/dev/null 2>&1 && echo "cmake: $(command -v cmake)" || echo "cmake: not found"
-    echo "CMAKE_COMMAND=${CMAKE_COMMAND:-<unset>}"
-    echo
-
-    echo "=== Environment ==="
-    echo "ROS2_PROJECTS_WS_ROOT=${ROS2_PROJECTS_WS_ROOT:-<unset>}"
-    echo "ROS_DISTRO=${ROS_DISTRO:-<unset>}"
-    echo "ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-<unset>}"
-    echo "RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-<unset>}"
-    echo "CYCLONEDDS_URI=${CYCLONEDDS_URI:-<unset>}"
-    echo "_ROS2_PROJECTS_WS_ENV_LOADED=${_ROS2_PROJECTS_WS_ENV_LOADED:-<unset>}"
-    echo
-
-    echo "=== Checks (ros2_env.bash) ==="
-    local ok=true
-    local expected_rmw="rmw_cyclonedds_cpp"
-    local expected_cyclone_uri=""
-    if [ -n "${ROS2_PROJECTS_WS_ROOT:-}" ]; then
-        expected_cyclone_uri="file://${ROS2_PROJECTS_WS_ROOT}/scripts/cyclone-dds.xml"
-    fi
-
-    if [ "${RMW_IMPLEMENTATION:-}" = "$expected_rmw" ]; then
-        echo "[OK] RMW_IMPLEMENTATION is $expected_rmw"
-    else
-        echo "[FAIL] RMW_IMPLEMENTATION should be $expected_rmw"
-        ok=false
-    fi
-
-    if [ -n "$expected_cyclone_uri" ] && [ "${CYCLONEDDS_URI:-}" = "$expected_cyclone_uri" ]; then
-        echo "[OK] CYCLONEDDS_URI matches workspace path"
-    else
-        echo "[FAIL] CYCLONEDDS_URI does not match expected workspace path"
-        ok=false
-    fi
-
-    if [ -n "${ROS2_PROJECTS_WS_ROOT:-}" ] && [ -f "${ROS2_PROJECTS_WS_ROOT}/scripts/cyclone-dds.xml" ]; then
-        echo "[OK] cyclone-dds.xml exists"
-    else
-        echo "[FAIL] cyclone-dds.xml missing"
-        ok=false
-    fi
-
-    if [ "${_ROS2_PROJECTS_WS_ENV_LOADED:-}" = "1" ]; then
-        echo "[OK] ros2_env.bash load marker is set"
-    else
-        echo "[FAIL] ros2_env.bash load marker is not set"
-        ok=false
-    fi
-
-    if command -v cmake >/dev/null 2>&1 && cmake --version >/dev/null 2>&1; then
-        echo "[OK] cmake works ($(command -v cmake))"
-    else
-        echo "[FAIL] cmake is missing or broken"
-        ok=false
-    fi
-
-    if [[ "${CMAKE_COMMAND:-}" == /usr/bin/cmake ]]; then
-        echo "[OK] CMAKE_COMMAND points to system cmake"
-    elif [[ -x /usr/bin/cmake ]]; then
-        echo "[FAIL] CMAKE_COMMAND should be /usr/bin/cmake"
-        ok=false
-    fi
-
-    if [ "$ok" = true ]; then
-        echo
-        echo "Diagnostic status: OK"
-    else
-        echo
-        echo "Diagnostic status: FAIL"
-        return 1
-    fi
 }
