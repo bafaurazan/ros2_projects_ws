@@ -3,92 +3,97 @@
 #
 # ROS2 Projects workspace helpers.
 #
-# This file is sourced by `scripts/ros2_env.bash` inside the container shell.
+# Sourced by `scripts/ros2_env.bash` inside the container shell.
 #
-# What you get:
-# - `build [<pkg> ...]`: "bootstrap + build" helper for a ROS2 workspace.
-# - `cbuild [colcon args...]`: distro-aware `colcon build` that writes to build_ws/build_<distro>/install_<distro>/log_<distro>.
-# - `diag`: quick environment sanity checks (CycloneDDS/RMW + paths).
+# Macros:
+# - `build [colcon args...]` — install deps (rosdep/apt/pip), then run `cbuild`.
+# - `cbuild [colcon args...]` — `colcon build` into ./build_ws/{build,install,log}_<ROS_DISTRO>/.
+# - `diag` — print env/tool sanity checks (RMW, CycloneDDS, cmake, paths).
 #
 
+# Install workspace dependencies (rosdep + apt_packages.txt + requirements.txt), then `cbuild`.
+# Usage: build [colcon build args...]
 build() {
     if [ ! -d "./src" ]; then
         echo "Missing ./src in current directory: $(pwd)"
         return 1
     fi
 
-    local install_deps=1
-    if [ "${1:-}" = "--no-deps" ]; then
-        install_deps=0
-        shift
-    fi
-
     local ros2_distro_name="${ROS_DISTRO:-humble}"
 
-    if [ "$install_deps" -eq 1 ]; then
-        echo "Updating rosdep index..."
-        rosdep update --rosdistro "$ros2_distro_name"
+    echo "Updating rosdep index..."
+    rosdep update --rosdistro "$ros2_distro_name"
 
-        echo "Installing rosdep dependencies..."
-        # Some repos nest multiple sibling packages below a non-`./src` directory (e.g. `./src/vendor/foo/pkg_a`,
-        # `./src/vendor/foo/pkg_b`). `rosdep` needs `--from-paths` to include that parent directory to resolve keys.
-        # The block below auto-detects such "package clusters" and adds them to the rosdep scan list.
-        local rosdep_paths=(./src)
-        declare -A _rosdep_seen=()
-        _rosdep_seen["./src"]=1
-        local d
-        while IFS= read -r -d '' d; do
-            shopt -s nullglob
-            local -a _nested_pkgs=( "$d"/*/package.xml )
-            shopt -u nullglob
-            ((${#_nested_pkgs[@]} >= 2)) || continue
-            [[ -n ${_rosdep_seen[$d]:-} ]] && continue
-            _rosdep_seen[$d]=1
-            rosdep_paths+=("$d")
-        done < <(find ./src -type d -print0)
+    echo "Installing rosdep dependencies..."
+    local rosdep_paths=(./src)
+    declare -A _rosdep_seen=()
+    _rosdep_seen["./src"]=1
+    local d
+    while IFS= read -r -d '' d; do
+        shopt -s nullglob
+        local -a _nested_pkgs=( "$d"/*/package.xml )
+        shopt -u nullglob
+        ((${#_nested_pkgs[@]} >= 2)) || continue
+        [[ -n ${_rosdep_seen[$d]:-} ]] && continue
+        _rosdep_seen[$d]=1
+        rosdep_paths+=("$d")
+    done < <(find ./src -type d -print0)
 
-        rosdep install --rosdistro "$ros2_distro_name" --default-yes \
-            --ignore-packages-from-source -r --from-paths "${rosdep_paths[@]}"
+    rosdep install --rosdistro "$ros2_distro_name" --default-yes \
+        --ignore-packages-from-source -r --from-paths "${rosdep_paths[@]}"
 
-        echo "Installing additional APT dependencies..."
-        while IFS= read -r apt_file; do
-            [ -n "$apt_file" ] || continue
-            while IFS= read -r apt_pkg; do
-                apt_pkg="$(echo "$apt_pkg" | sed 's/\s*#.*$//g' | xargs)"
-                [ -n "$apt_pkg" ] || continue
-                sudo apt-get install -y "$apt_pkg"
-            done < "$apt_file"
-        done < <(find ./src -type f -name apt_packages.txt)
+    echo "Installing additional APT dependencies..."
+    while IFS= read -r apt_file; do
+        [ -n "$apt_file" ] || continue
+        while IFS= read -r apt_pkg; do
+            apt_pkg="$(echo "$apt_pkg" | sed 's/\s*#.*$//g' | xargs)"
+            [ -n "$apt_pkg" ] || continue
+            sudo apt-get install -y "$apt_pkg"
+        done < "$apt_file"
+    done < <(find ./src -type f -name apt_packages.txt)
 
-        echo "Installing additional PIP dependencies..."
-        # Ubuntu 24.04+/Jazzy mark the system Python as PEP 668 "externally managed".
-        # In our distrobox containers, allow installing requirements into the user/system
-        # site without forcing every package onto apt or a separate venv.
-        local pip_args=(-r)
+    # Install into $VIRTUAL_ENV / ./.venv / ./venv when present. Otherwise use system python3;
+    # on Ubuntu 24.04+ (e.g. Jazzy) system pip blocks installs (PEP 668), so add --break-system-packages.
+    echo "Installing additional PIP dependencies..."
+    local pip_python=""
+    local using_venv=0
+    if [[ -n "${VIRTUAL_ENV:-}" && -x "${VIRTUAL_ENV}/bin/python" ]]; then
+        pip_python="${VIRTUAL_ENV}/bin/python"
+        using_venv=1
+    elif [[ -x "./.venv/bin/python" ]]; then
+        pip_python="$(pwd)/.venv/bin/python"
+        using_venv=1
+    elif [[ -x "./venv/bin/python" ]]; then
+        pip_python="$(pwd)/venv/bin/python"
+        using_venv=1
+    else
+        pip_python="$(command -v python3)"
+    fi
+
+    local pip_args=(-r)
+    if [ "$using_venv" -eq 1 ]; then
+        echo "PIP target: venv ($pip_python)"
+    else
         local py_stdlib
-        py_stdlib="$(python3 -c 'import sysconfig; print(sysconfig.get_path("stdlib"))' 2>/dev/null || true)"
+        py_stdlib="$("$pip_python" -c 'import sysconfig; print(sysconfig.get_path("stdlib"))' 2>/dev/null || true)"
         if [[ -n "$py_stdlib" && -f "${py_stdlib}/EXTERNALLY-MANAGED" ]]; then
             pip_args=(--break-system-packages -r)
         fi
-        while IFS= read -r req_file; do
-            [ -n "$req_file" ] || continue
-            python3 -m pip install "${pip_args[@]}" "$req_file"
-        done < <(find ./src -type f -name requirements.txt)
-    else
-        echo "Skipping dependency installation (--no-deps)."
+        echo "PIP target: system Python ($pip_python)"
     fi
 
+    while IFS= read -r req_file; do
+        [ -n "$req_file" ] || continue
+        "$pip_python" -m pip install "${pip_args[@]}" "$req_file"
+    done < <(find ./src -type f -name requirements.txt)
+
     echo "Building packages..."
-    colcon_build_distro "$@"
+    cbuild "$@"
 }
 
-colcon_build_distro() {
-    # Usage:
-    #   cbuild [colcon build args...]
-    #   colcon_build_distro [colcon build args...]
-    #
-    # Uses `ROS_DISTRO` to keep build/install/log outputs separate per distro under ./build_ws/:
-    #   build_ws/build_<distro>/ install_<distro>/ log_<distro>/
+# Runs `colcon build` into ./build_ws/build_<ROS_DISTRO>/, install_*/, log_*/, then sources install.
+# Usage: cbuild [colcon build args...]
+cbuild() {
     if [ ! -d "./src" ]; then
         echo "Missing ./src in current directory: $(pwd)"
         return 1
@@ -113,7 +118,7 @@ colcon_build_distro() {
         "$@"
 
     if [ -f "./${install_base}/local_setup.bash" ]; then
-        # `local_setup.bash` may rely on variables during bootstrap; tolerate shells with `set -u`.
+        # Overlay this workspace only (ROS already sourced). Drop set -u for source — ament reads unset variables.
         local had_nounset=0
         if [[ $- == *u* ]]; then
             had_nounset=1
@@ -128,9 +133,7 @@ colcon_build_distro() {
     echo "Done."
 }
 
-# Convenience alias for interactive use.
-alias cbuild='colcon_build_distro'
-
+# Print system/tools/env info and verify ros2_env.bash settings (RMW, CycloneDDS, cmake).
 diag() {
     echo "=== System ==="
     if command -v lsb_release >/dev/null 2>&1; then

@@ -66,30 +66,26 @@ What this does:
 ### Usage
 
 ```bash
-# Full bootstrap + build of everything under ./src
+# Full deps + build of everything under ./src
 build
 
-# Build selected packages only (exact colcon package names)
-build my_pkg another_pkg
-
-# Skip dependency installation; only run colcon
-build --no-deps
-build --no-deps my_pkg
+# Build with extra colcon args (after deps)
+build --packages-select my_pkg another_pkg
 ```
 
-Any arguments after an optional `--no-deps` are forwarded to `colcon build` (e.g. package names, `--packages-up-to`, `--cmake-args`, …).
+Any arguments are forwarded to `cbuild` / `colcon build` (e.g. `--packages-select`, `--packages-up-to`, `--cmake-args`, …).
 
 ### Step-by-step: what `build` does
 
 1. **Guard** — fails if `./src` is missing in the current directory.
 
-2. **Dependencies** (unless `--no-deps`):
+2. **Dependencies**:
    - `rosdep update --rosdistro $ROS_DISTRO`
    - `rosdep install` from `./src` (also scans nested “package clusters”: directories under `./src` that contain ≥2 sibling `package.xml` trees, so vendor layouts still resolve)
    - installs every package listed in any `apt_packages.txt` found under `./src` (`sudo apt-get install -y …`)
-   - installs every `requirements.txt` found under `./src` (`python3 -m pip install -r …`; on PEP 668 / Ubuntu 24.04+ uses `--break-system-packages` so installs work inside the container)
+   - installs every `requirements.txt` under `./src` via pip: prefers `$VIRTUAL_ENV`, then `./.venv` / `./venv`, else system `python3`. System installs on Ubuntu 24.04+ need `--break-system-packages` because PEP 668 blocks plain `pip install` into the distro Python (common with Jazzy; Humble/22.04 usually does not).
 
-3. **Build** — calls the distro-aware colcon wrapper (same as `cbuild`):
+3. **Build** — calls `cbuild`:
    - discovers packages with `--base-paths ./src`
    - uses `--symlink-install`
    - writes artifacts under `./build_ws/` (per distro, so humble and jazzy do not clash):
@@ -116,9 +112,10 @@ cbuild --packages-select my_pkg
 ```bash
 ./scripts/distrobox jazzy
 cd path/to/your_ws          # directory that contains ./src
+# optional (e.g. RAI): source .venv/bin/activate   # or keep ./.venv in the workspace root
 build                       # deps + build + source install
 # or later, after deps are already installed:
-build --no-deps my_pkg
+cbuild --packages-select my_pkg
 ```
 
 ## Diagnostic Macro
