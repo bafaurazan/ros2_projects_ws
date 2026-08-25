@@ -6,8 +6,6 @@ __pycache__
 # Distrobox home directory
 /.distrobox*
 
-# Visual Studio Code configuration
-/.vscode
 /.cache
 
 # ROS 2 build and runtime artifacts

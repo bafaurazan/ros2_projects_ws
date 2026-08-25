@@ -1,0 +1,22 @@
+{
+  "git.autoRepositoryDetection": true,
+  "git.repositoryScanMaxDepth": 12,
+  "git.openRepositoryInParentFolders": "never",
+  "git.repositoryScanIgnoredFolders": [
+    "node_modules",
+    "trash",
+    "build",
+    "install",
+    "log",
+    "_deps",
+    ".cache"
+  ],
+  "files.watcherExclude": {
+    "**/trash/**": true,
+    "**/build/**": true,
+    "**/install/**": true,
+    "**/log/**": true,
+    "**/_deps/**": true,
+    "**/.cache/**": true
+  }
+}
