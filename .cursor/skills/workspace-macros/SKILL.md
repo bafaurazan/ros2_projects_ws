@@ -1,11 +1,11 @@
 ---
 name: workspace-macros
-description: Add or change workspace shell macros under scripts/macros/. Use when creating a new macro, a scripts/macros bundle in a subrepo, or explaining sync_macros and diag.
+description: Add or change workspace shell macros under scripts/macros/. Use when creating a new macro, a scripts/macros bundle in a subrepo, or explaining load_macros and diag.
 ---
 
 # Workspace macros
 
-Macros are bash functions sourced in place. `sync_macros` (run at shell start) discovers bundles and `source`s public APIs. Nothing is copied to `build_ws/`.
+Macros are bash functions sourced in place. `load_macros` (run at shell start) discovers bundles and `source`s public APIs. Nothing is copied to `build_ws/`.
 
 ## Bundle layout
 
@@ -23,9 +23,11 @@ Small repos may use a flat `scripts/macros/*.bash` instead of `api/`.
 
 `<repo>` is the directory immediately above `scripts/` (root workspace or `src/<repo>/`).
 
+Root workspace only: `scripts/macros/api/load.bash` is the bootstrap. Do not add `load.bash` to a subrepo.
+
 ## Rules
 
-- Public function names must be unique across all bundles. `sync_macros` aborts on collisions.
+- Public function names must be unique across all bundles. `load_macros` aborts on collisions.
 - Names starting with `_` or containing `::` are not public macros.
 - Put a one-line description comment above each public function (and a `# Usage:` line). `diag` prints name, source path, and that description.
 
@@ -37,6 +39,6 @@ Small repos may use a flat `scripts/macros/*.bash` instead of `api/`.
 
 ## After adding a file
 
-Run `sync_macros` or open a new `./scripts/setup.bash` shell, then `diag` to confirm the list.
+Run `load_macros` or open a new `./scripts/setup.bash` shell, then `diag` to confirm the list.
 
 Details: [scripts/macros/README.md](scripts/macros/README.md)

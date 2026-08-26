@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 
 #
-# Container shell bootstrap (sourced from ~/.bashrc via Distrobox).
+# Runtime session bootstrap (sourced from ~/.bashrc inside the container).
 #
 # Loads ROS 2, optional local display, then macros from
 # scripts/macros/ under the workspace (sourced in place).
@@ -25,21 +25,21 @@ _env_load() {
     fi
     _env_set_loaded
 
-    local env_dir
-    env_dir="$(_env_get_dir)"
+    local session_dir
+    session_dir="$(_env_get_dir)"
 
     # shellcheck disable=SC1091
-    source "${env_dir}/modules/ros2.bash"
+    source "${session_dir}/modules/ros2.bash"
     # shellcheck disable=SC1091
-    source "${env_dir}/modules/display.bash"
+    source "${session_dir}/modules/display.bash"
 
     init_ros2_env
     set_local_display_if_available
     unset -f set_xauthority_from_local_candidates
 
     # shellcheck disable=SC1091
-    source "${ROS2_PROJECTS_WS_ROOT}/scripts/macros/api/sync.bash"
-    sync_macros
+    source "${ROS2_PROJECTS_WS_ROOT}/scripts/macros/api/load.bash"
+    load_macros
 }
 
 _env_load

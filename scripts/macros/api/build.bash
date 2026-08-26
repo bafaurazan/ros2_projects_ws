@@ -46,8 +46,8 @@ cbuild() {
         return 1
     fi
 
-    if declare -F sync_macros >/dev/null 2>&1; then
-        sync_macros || return 1
+    if declare -F load_macros >/dev/null 2>&1; then
+        load_macros || return 1
     fi
 
     local ros2_distro_name workspace_artifacts_dir build_base install_base log_base

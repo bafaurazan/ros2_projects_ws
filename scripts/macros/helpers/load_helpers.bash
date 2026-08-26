@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 
-# Private helpers for sync_macros (short names). Bound to sync::_* via helpers_list.bash.
+# Private helpers for load_macros (short names). Bound to load::_* via helpers_list.bash.
 
 _get_repo_from_path() {
     # …/<repo>/scripts/macros → <repo>
@@ -83,6 +83,7 @@ _source_direct_files() {
     for src in "$@"; do
         while IFS= read -r file; do
             [[ -n "$file" ]] || continue
+            [[ "$(basename "$file")" == "load.bash" ]] && continue
             # shellcheck disable=SC1090
             source "$file"
         done < <(_list_api_files "$src")

@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 
 #
-# Macros only (Git Bash / no Distrobox).
+# Host session (Git Bash / no ROS).
 # Loaded by: ./scripts/setup.bash macros
 #
 
@@ -10,9 +10,9 @@ _macros_is_loaded() {
 }
 
 _macros_set_workspace_root() {
-    local host_setup_dir
-    host_setup_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    export ROS2_PROJECTS_WS_ROOT="$(cd "${host_setup_dir}/../.." && pwd)"
+    local session_dir
+    session_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    export ROS2_PROJECTS_WS_ROOT="$(cd "${session_dir}/../../.." && pwd)"
 }
 
 _macros_load_bashrc_if_rcfile() {
@@ -38,8 +38,8 @@ _macros_load() {
     _macros_set_workspace_root
 
     # shellcheck disable=SC1091
-    source "${ROS2_PROJECTS_WS_ROOT}/scripts/macros/api/sync.bash"
-    sync_macros
+    source "${ROS2_PROJECTS_WS_ROOT}/scripts/macros/api/load.bash"
+    load_macros
 }
 
 _macros_load

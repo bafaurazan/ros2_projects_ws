@@ -14,6 +14,8 @@ From the workspace root:
 
 `humble` / `jazzy` enter Distrobox (`ros2_projects_ws_<distro>`). `macros` loads shell macros only (Git Bash / host; no ROS).
 
+Script layout: [scripts/README.md](scripts/README.md).
+
 ## Macros
 
 Available after setup. Names must be unique across all `scripts/macros/` bundles.
@@ -21,13 +23,13 @@ Available after setup. Names must be unique across all `scripts/macros/` bundles
 - `build [colcon args...]` — rosdep / apt / pip, then `cbuild`. Requires `./src` in CWD.
 - `cbuild [colcon args...]` — colcon into `./build_ws/build_<ROS_DISTRO>/`, `install_*`, `log_*`.
 - `diag` — env checks and a live list of macros (name, source path, description).
-- `sync_macros` — rediscover `scripts/macros/` and source public APIs in place (no copy).
+- `load_macros` — rediscover `scripts/macros/` and source public APIs in place (no copy).
 
 Convention and layout: [scripts/macros/README.md](scripts/macros/README.md).
 
 ## Layout
 
-- `scripts/` — setup, Distrobox env, workspace macros
+- `scripts/` — CLI router, session bootstrap, workspace macros
 - `src/` — cloned subprojects (each may have its own `scripts/macros/`, `.cursor/`, `AGENTS.md`)
 - `./build_ws/` — colcon artifacts in the project you build; not a macro cache
 - `.cursor/` — workspace rules and skills (git); subrepos may add their own

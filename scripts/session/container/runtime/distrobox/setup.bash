@@ -2,19 +2,11 @@
 
 set -euo pipefail
 
-# ==============================================================================
-# Configuration (global variables)
-# ==============================================================================
-ROS_DISTRO="${1:-${ROS_DISTRO:-humble}}"
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-WS_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# Distrobox backend: create/enter ros2_projects_ws_<distro> and hook the container session.
 
-CONTAINER_NAME="ros2_projects_ws_${ROS_DISTRO}"
-DISTROBOX_HOME="${WS_DIR}/.distrobox_${ROS_DISTRO}"
-ENV_HOST_PATH="/run/host${WS_DIR}/scripts/env/auto_setup.bash"
-
-ROS_IMAGE=""
-ADDITIONAL_PACKAGES="iputils-ping nano vim alsa-utils alsa pulseaudio git git-man python3 python-is-python3 python3-pip usbutils"
+_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "${_dir}/config.bash" "${1:-}"
 
 # ==============================================================================
 # Predicates / getters / setters
@@ -182,8 +174,8 @@ configure_container_internals() {
 
 # BEGIN ROS2_PROJECTS_WS_ENV
 export ROS_DISTRO=\"$ROS_DISTRO\"
-if [ -f \"$ENV_HOST_PATH\" ]; then
-    source \"$ENV_HOST_PATH\"
+if [ -f \"$CONTAINER_SESSION_SETUP\" ]; then
+    source \"$CONTAINER_SESSION_SETUP\"
 fi
 # END ROS2_PROJECTS_WS_ENV
 EOF

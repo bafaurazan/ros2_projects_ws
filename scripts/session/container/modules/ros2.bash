@@ -3,7 +3,8 @@
 # ROS 2 workspace context: distro, underlay, middleware, overlay prefix paths, cmake.
 
 get_workspace_root_from_modules() {
-    cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd
+    # scripts/session/container/modules → workspace root
+    cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd
 }
 
 set_workspace_root() {

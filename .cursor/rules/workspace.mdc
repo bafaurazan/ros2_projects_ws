@@ -5,9 +5,9 @@ alwaysApply: true
 
 # ros2_projects_ws
 
-- Entry: `./scripts/setup.bash humble|jazzy|macros` from the workspace root.
-- Prefer macros `build` / `cbuild` / `diag` / `sync_macros` over ad-hoc `colcon` when the user is in this workspace.
+- Entry: `./scripts/setup.bash humble|jazzy|macros` from the workspace root. Layout: [scripts/README.md](scripts/README.md).
+- Prefer macros `build` / `cbuild` / `diag` / `load_macros` over ad-hoc `colcon` when the user is in this workspace.
 - `build` and `cbuild` operate on `./src` in the current directory and write colcon output to `./build_ws/` (`build_<ROS_DISTRO>/`, `install_*`, `log_*`).
 - Do not modify `.distrobox_*` container homes or generated colcon trees unless the user asks.
-- Each repo may keep `scripts/macros/` (sourced in place, not copied). Function names must be unique workspace-wide.
+- Each repo may keep `scripts/macros/` (sourced in place, not copied). Function names must be unique workspace-wide. Do not copy `macros/api/load.bash` into a subrepo.
 - Subprojects under `src/` may have their own `.cursor/` and `AGENTS.md`; those apply in that subtree. Do not copy them into the workspace root.

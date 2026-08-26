@@ -3,7 +3,8 @@
 Ready-to-use ROS 2 environment in a Distrobox container, plus a shared macro system (`build`, `cbuild`, `diag`, …) — including macros from repositories under `src/`.
 
 - **Entry point:** `./scripts/setup.bash <humble|jazzy [prod]|macros>`
-- **Macros:** documentation and convention → [scripts/macros/README.md](scripts/macros/README.md)
+- **Scripts layout:** [scripts/README.md](scripts/README.md)
+- **Macros:** [scripts/macros/README.md](scripts/macros/README.md)
 - **Agent:** [AGENTS.md](AGENTS.md); Cursor rules/skills in `.cursor/` (subprojects may add their own)
 
 ## Host requirements
@@ -32,13 +33,11 @@ From the workspace root:
 - picks a ROS image (`desktop-full` on x86_64, `ros-base` on arm)
 - installs CycloneDDS RMW, git, pip, USB tools, and related packages in the container
 - uses an isolated home under `.distrobox_<distro>/`
-- hooks `~/.bashrc` to auto-load `scripts/env/auto_setup.bash` (ROS, middleware, macros)
+- hooks `~/.bashrc` to auto-load `scripts/session/container/setup.bash` (ROS, middleware, macros)
 
 `macros` opens an interactive bash with workspace macros only (no Distrobox / no ROS). Use this on Git Bash for helpers such as `notaura_thesis_build`. `exit` returns to the previous shell.
 
 Optional: `source scripts/setup.bash macros` loads macros in the current shell instead of opening a new one.
-
-Macros: [scripts/macros/README.md](scripts/macros/README.md).
 
 ### TODO: production runtime (`prod`)
 
@@ -49,7 +48,7 @@ CLI is reserved:
 ./scripts/setup.bash humble prod
 ```
 
-Not implemented yet. Intended for an isolated production image (instead of Distrobox). Runtime engine (Docker or Podman) will be chosen at implementation time — the flag stays `prod`, not `docker` / `podman`.
+Not implemented yet. Intended for an isolated production image (instead of Distrobox). Runtime engine (Docker or Podman) will be chosen at implementation time — the flag stays `prod`, not `docker` / `podman`. Stub: `scripts/session/container/runtime/docker/`.
 
 ## Work inside the container
 
@@ -83,9 +82,9 @@ Implementation details: [scripts/macros/README.md](scripts/macros/README.md).
 
 ## Macros
 
-Convention: each repo keeps `scripts/macros/` (`api/*.bash`, optional `helpers/`, `README.md`). After the shell starts, `sync_macros` sources those public APIs from their original paths.
+Convention: each repo keeps `scripts/macros/` (`api/*.bash`, optional `helpers/`, `README.md`). After the shell starts, `load_macros` sources those public APIs from their original paths.
 
-Full documentation, the convention for new repos, and `build` / `cbuild` / `diag` / `sync_macros` → [scripts/macros/README.md](scripts/macros/README.md)
+Full documentation, the convention for new repos, and `build` / `cbuild` / `diag` / `load_macros` → [scripts/macros/README.md](scripts/macros/README.md)
 
 `notaura_thesis_build` and other host-side helpers work with `./scripts/setup.bash macros`. ROS `build` / `cbuild` still need Distrobox. Requires `latexmk` or `pdflatex` on the host (MiKTeX / TeX Live) for the thesis.
 
@@ -96,13 +95,11 @@ AGENTS.md               # agent map (git)
 .cursor/                # workspace rules + skills (git)
 scripts/
   setup.bash            # ./scripts/setup.bash humble|jazzy [prod]|macros
-  env/
-    distrobox           # container create/enter
-    auto_setup.bash     # sourced from container ~/.bashrc
-    modules/            # ros2.bash, display.bash, cyclone-dds.xml
-  host/
-    setup.bash          # macros only (no ROS); CLI: macros
-  macros/               # api/ (public), helpers/ (private), README.md
+  README.md             # session vs macros vs runtime
+  session/
+    macros/setup.bash   # host (CLI: macros)
+    container/          # Distrobox/Docker session + runtime backends
+  macros/               # api/ (public), helpers/ (private)
 src/                    # subprojects (each may have scripts/macros/, .cursor/, AGENTS.md)
 build_ws/               # per-project colcon artifacts (created in CWD by build/cbuild)
 ```

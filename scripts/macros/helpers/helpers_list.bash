@@ -12,7 +12,7 @@ source "${_helpers_dir}/diag_helpers.bash"
 # shellcheck disable=SC1091
 source "${_helpers_dir}/build_helpers.bash"
 # shellcheck disable=SC1091
-source "${_helpers_dir}/sync_helpers.bash"
+source "${_helpers_dir}/load_helpers.bash"
 
 _macros_bind_namespace() {
     local namespace="$1"
@@ -49,7 +49,7 @@ _macros_bind_namespace build \
     _install_pip_requirements \
     _source_install_overlay
 
-_macros_bind_namespace sync \
+_macros_bind_namespace load \
     _get_repo_from_path \
     _has_workspace_root \
     _find_sources \

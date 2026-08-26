@@ -51,12 +51,12 @@ _print_environment() {
 
 _get_expected_cyclone_uri() {
     [[ -n "${ROS2_PROJECTS_WS_ROOT:-}" ]] || return 1
-    printf '%s\n' "file://${ROS2_PROJECTS_WS_ROOT}/scripts/env/modules/cyclone-dds.xml"
+    printf '%s\n' "file://${ROS2_PROJECTS_WS_ROOT}/scripts/session/container/modules/cyclone-dds.xml"
 }
 
 _has_cyclone_xml() {
     [[ -n "${ROS2_PROJECTS_WS_ROOT:-}" \
-        && -f "${ROS2_PROJECTS_WS_ROOT}/scripts/env/modules/cyclone-dds.xml" ]]
+        && -f "${ROS2_PROJECTS_WS_ROOT}/scripts/session/container/modules/cyclone-dds.xml" ]]
 }
 
 _is_env_loaded() {
@@ -200,7 +200,7 @@ _print_macros() {
     while IFS= read -r src; do
         [[ -n "$src" ]] || continue
         found=1
-        repo="$(sync::_get_repo_from_path "$src")"
+        repo="$(load::_get_repo_from_path "$src")"
         echo
         echo "[$repo]  $src"
         while IFS= read -r file; do
@@ -213,9 +213,9 @@ _print_macros() {
                 else
                     printf '  %-16s  (%s)\n' "$fn" "$(basename "$file")"
                 fi
-            done < <(sync::_extract_functions "$file")
-        done < <(sync::_list_api_files "$src")
-    done < <(sync::_find_sources "${ROS2_PROJECTS_WS_ROOT}")
+            done < <(load::_extract_functions "$file")
+        done < <(load::_list_api_files "$src")
+    done < <(load::_find_sources "${ROS2_PROJECTS_WS_ROOT}")
 
     if [[ "$found" -eq 0 ]]; then
         echo "No scripts/macros/ bundles found."
