@@ -1,7 +1,7 @@
 __pycache__
 
-# cursor
-.cursor
+# Cursor local artifacts (keep .cursor/rules and .cursor/skills in git)
+.cursor/*.log
 
 # Distrobox home directory
 /.distrobox*

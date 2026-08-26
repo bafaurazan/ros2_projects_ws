@@ -116,34 +116,108 @@ _print_checks() {
     [[ "$ok" == true ]]
 }
 
-_get_macros_index() {
-    printf '%s\n' "${ROS2_PROJECTS_WS_ROOT:-}/build_ws/macros/macros_index"
-}
+_extract_function_description() {
+    local file="$1"
+    local fn="$2"
+    local line stripped text
+    local -a comments=()
+    local in_comment_block=0
+    local found=0
 
-_has_macros_index() {
-    local index_file
-    index_file="$(_get_macros_index)"
-    [[ -n "${ROS2_PROJECTS_WS_ROOT:-}" && -f "$index_file" ]]
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        stripped="${line#"${line%%[![:space:]]*}"}"
+
+        if [[ "$stripped" == \#!* ]]; then
+            comments=()
+            in_comment_block=0
+            continue
+        fi
+
+        if [[ "$stripped" == \#* ]]; then
+            if [[ "$in_comment_block" -eq 0 ]]; then
+                comments=()
+                in_comment_block=1
+            fi
+            text="${stripped#\#}"
+            text="${text# }"
+            comments+=("$text")
+            continue
+        fi
+
+        if [[ -z "$stripped" ]]; then
+            in_comment_block=0
+            continue
+        fi
+
+        in_comment_block=0
+        if [[ "$stripped" =~ ^(function[[:space:]]+)?${fn}[[:space:]]*\(\) ]]; then
+            found=1
+            break
+        fi
+        comments=()
+    done < "$file"
+
+    if [[ "$found" -eq 1 && ${#comments[@]} -gt 0 ]]; then
+        local candidate
+        for candidate in "${comments[@]}"; do
+            [[ -z "$candidate" ]] && continue
+            [[ "$candidate" == Usage:* ]] && continue
+            printf '%s\n' "$candidate"
+            return 0
+        done
+        candidate="${comments[0]}"
+        candidate="${candidate#Usage:}"
+        candidate="${candidate# }"
+        printf '%s\n' "$candidate"
+        return 0
+    fi
+
+    while IFS= read -r line; do
+        stripped="${line#"${line%%[![:space:]]*}"}"
+        [[ "$stripped" == \#!* ]] && continue
+        if [[ "$stripped" == \#* ]]; then
+            text="${stripped#\#}"
+            text="${text# }"
+            [[ -n "$text" ]] || continue
+            printf '%s\n' "$text"
+            return 0
+        fi
+        [[ -n "$stripped" ]] && break
+    done < "$file"
 }
 
 _print_macros() {
     echo "=== Available macros ==="
-    local index_file
-    index_file="$(_get_macros_index)"
 
-    if ! _has_macros_index; then
-        echo "No macros_index yet. Run sync_macros (or open a new shell)."
+    if [[ -z "${ROS2_PROJECTS_WS_ROOT:-}" ]]; then
+        echo "ROS2_PROJECTS_WS_ROOT is not set. Run ./scripts/setup.bash first."
         return 0
     fi
 
-    local repo source_dir file fn last_repo=""
-    while IFS=$'\t' read -r repo source_dir file fn; do
-        [[ "$repo" == \#* || -z "$repo" ]] && continue
-        if [[ "$repo" != "$last_repo" ]]; then
-            echo
-            echo "[$repo]  $source_dir  ->  ${ROS2_PROJECTS_WS_ROOT}/build_ws/macros/${repo}/"
-            last_repo="$repo"
-        fi
-        echo "  $fn  ($file)"
-    done < "$index_file"
+    local src repo file fn description
+    local found=0
+
+    while IFS= read -r src; do
+        [[ -n "$src" ]] || continue
+        found=1
+        repo="$(sync::_get_repo_from_path "$src")"
+        echo
+        echo "[$repo]  $src"
+        while IFS= read -r file; do
+            [[ -n "$file" ]] || continue
+            while IFS= read -r fn; do
+                [[ -n "$fn" ]] || continue
+                description="$(diag::_extract_function_description "$file" "$fn")"
+                if [[ -n "$description" ]]; then
+                    printf '  %-16s  %s\n' "$fn" "$description"
+                else
+                    printf '  %-16s  (%s)\n' "$fn" "$(basename "$file")"
+                fi
+            done < <(sync::_extract_functions "$file")
+        done < <(sync::_list_api_files "$src")
+    done < <(sync::_find_sources "${ROS2_PROJECTS_WS_ROOT}")
+
+    if [[ "$found" -eq 0 ]]; then
+        echo "No scripts/macros/ bundles found."
+    fi
 }

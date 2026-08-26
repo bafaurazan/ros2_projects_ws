@@ -34,8 +34,7 @@ _macros_bind_namespace diag \
     _has_cyclone_xml \
     _is_env_loaded \
     _print_checks \
-    _get_macros_index \
-    _has_macros_index \
+    _extract_function_description \
     _print_macros
 
 _macros_bind_namespace build \
@@ -53,12 +52,11 @@ _macros_bind_namespace build \
 _macros_bind_namespace sync \
     _get_repo_from_path \
     _has_workspace_root \
-    _get_dest_root \
     _find_sources \
+    _list_api_files \
     _extract_functions \
-    _copy_bundle \
     _has_nounset \
-    _source_cache
+    _source_direct_files
 
 unset -f _macros_bind_namespace
 unset _helpers_dir

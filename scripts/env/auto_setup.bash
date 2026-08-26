@@ -4,7 +4,7 @@
 # Container shell bootstrap (sourced from ~/.bashrc via Distrobox).
 #
 # Loads ROS 2, optional local display, then macros from
-# $ROS2_PROJECTS_WS_ROOT/build_ws/macros/.
+# scripts/macros/ under the workspace (sourced in place).
 #
 
 _env_is_loaded() {
