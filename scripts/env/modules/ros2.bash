@@ -2,8 +2,12 @@
 
 # ROS 2 workspace context: distro, underlay, middleware, overlay prefix paths, cmake.
 
+get_workspace_root_from_modules() {
+    cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd
+}
+
 set_workspace_root() {
-    export ROS2_PROJECTS_WS_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+    export ROS2_PROJECTS_WS_ROOT="$(get_workspace_root_from_modules)"
 }
 
 set_default_ros2_context() {
@@ -18,11 +22,18 @@ reset_overlay_prefix_paths() {
     unset COLCON_PREFIX_PATH
 }
 
+get_ros2_setup_path() {
+    printf '%s\n' "/opt/ros/${ROS_DISTRO}/local_setup.bash"
+}
+
+has_ros2_setup() {
+    [[ -f "$(get_ros2_setup_path)" ]]
+}
+
 source_ros2_setup_if_available() {
-    local ros2_setup_path="/opt/ros/$ROS_DISTRO/local_setup.bash"
-    if [[ -f "$ros2_setup_path" ]]; then
-        source "$ros2_setup_path"
-    fi
+    has_ros2_setup || return 0
+    # shellcheck disable=SC1090
+    source "$(get_ros2_setup_path)"
 }
 
 # Drop overlay entries that point at removed build_ws/install_* trees.
@@ -33,6 +44,7 @@ prune_prefix_path() {
 
     local -a kept=()
     local entry
+    local -a entries=()
     IFS=':' read -ra entries <<< "$current"
     for entry in "${entries[@]}"; do
         [[ -n "$entry" && -d "$entry" ]] && kept+=("$entry")
@@ -56,27 +68,41 @@ sanitize_overlay_paths() {
     prune_prefix_path CMAKE_PREFIX_PATH
 }
 
+is_broken_local_cmake() {
+    local cmake_bin="$1"
+    [[ "$cmake_bin" == "${HOME}/.local/bin/cmake" ]] || return 1
+    ! "$cmake_bin" --version >/dev/null 2>&1
+}
+
+has_system_cmake() {
+    [[ -x /usr/bin/cmake ]]
+}
+
 # pip's `cmake` package can install a broken console script in ~/.local/bin that
 # shadows `/usr/bin/cmake` from the container and breaks colcon/ament builds.
 prefer_current_env_cmake() {
-    [[ -x /usr/bin/cmake ]] || return 0
+    has_system_cmake || return 0
 
     export CMAKE_COMMAND=/usr/bin/cmake
 
     local cmake_bin
     cmake_bin="$(command -v cmake 2>/dev/null || true)"
-    if [[ "$cmake_bin" == "${HOME}/.local/bin/cmake" ]] && ! "$cmake_bin" --version >/dev/null 2>&1; then
+    if is_broken_local_cmake "$cmake_bin"; then
         export PATH="/usr/bin:$(echo "$PATH" | tr ':' '\n' | grep -vxF "${HOME}/.local/bin" | paste -sd: -)"
     elif [[ "$cmake_bin" != /usr/bin/cmake ]]; then
         export PATH="/usr/bin:${PATH}"
     fi
 }
 
+get_cyclone_dds_config_path() {
+    local modules_dir
+    modules_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    printf '%s\n' "${modules_dir}/cyclone-dds.xml"
+}
+
 set_default_middleware() {
-    local _env_config_dir
-    _env_config_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-    export CYCLONEDDS_URI="file://${_env_config_dir}/cyclone-dds.xml"
+    export CYCLONEDDS_URI="file://$(get_cyclone_dds_config_path)"
 }
 
 init_ros2_env() {

@@ -17,75 +17,115 @@ ROS_IMAGE=""
 ADDITIONAL_PACKAGES="iputils-ping nano vim alsa-utils alsa pulseaudio git git-man python3 python-is-python3 python3-pip usbutils"
 
 # ==============================================================================
-# Functions
+# Predicates / getters / setters
 # ==============================================================================
 
-# 1. Validate input and select image for host architecture
+is_supported_ros_distro() {
+    [[ "$1" == "humble" || "$1" == "jazzy" ]]
+}
+
+is_humble_distro() {
+    [[ "$1" == "humble" ]]
+}
+
+has_command() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+has_nvidia_gpu() {
+    has_command lspci && lspci | grep -qi nvidia
+}
+
+has_fuse_overlay_config() {
+    local storage_conf="$1"
+    [[ -f "$storage_conf" ]] && grep -q "fuse-overlayfs" "$storage_conf"
+}
+
+has_distrobox_container() {
+    distrobox list --no-color | tr -s ' ' | cut -d ' ' -f 3 | tail -n +2 | grep -q "^${CONTAINER_NAME}$"
+}
+
+get_host_arch() {
+    uname -m
+}
+
+get_default_ros_image() {
+    local distro="$1"
+    local arch
+    arch="$(get_host_arch)"
+
+    case "$arch" in
+        x86_64|amd64) printf '%s\n' "docker.io/osrf/ros:${distro}-desktop-full" ;;
+        aarch64|arm64) printf '%s\n' "docker.io/arm64v8/ros:${distro}-ros-base" ;;
+        armv7l|armhf)  printf '%s\n' "docker.io/arm32v7/ros:${distro}-ros-base" ;;
+        *) return 1 ;;
+    esac
+}
+
+set_ros_image_for_host_arch() {
+    local image
+    if ! image="$(get_default_ros_image "$ROS_DISTRO")"; then
+        echo "❌ Error: Unsupported architecture '$(get_host_arch)'."
+        exit 1
+    fi
+    ROS_IMAGE="${ROS_DOCKER_IMAGE:-$image}"
+}
+
+# ==============================================================================
+# Setup steps
+# ==============================================================================
+
 validate_and_set_architecture() {
-    if [[ "$ROS_DISTRO" != "humble" && "$ROS_DISTRO" != "jazzy" ]]; then
+    if ! is_supported_ros_distro "$ROS_DISTRO"; then
         echo "❌ Error: Unsupported ROS distro: $ROS_DISTRO"
         echo "Usage: ./scripts/setup.bash [humble|jazzy [prod]|macros]"
         exit 1
     fi
 
-    if [[ "$ROS_DISTRO" != "humble" ]]; then
+    if ! is_humble_distro "$ROS_DISTRO"; then
         ADDITIONAL_PACKAGES="$ADDITIONAL_PACKAGES unminimize"
     fi
 
-    local host_arch
-    host_arch="$(uname -m)"
-
-    case "$host_arch" in
-        x86_64|amd64) ROS_IMAGE="${ROS_DOCKER_IMAGE:-docker.io/osrf/ros:${ROS_DISTRO}-desktop-full}" ;;
-        aarch64|arm64) ROS_IMAGE="${ROS_DOCKER_IMAGE:-docker.io/arm64v8/ros:${ROS_DISTRO}-ros-base}" ;;
-        armv7l|armhf)  ROS_IMAGE="${ROS_DOCKER_IMAGE:-docker.io/arm32v7/ros:${ROS_DISTRO}-ros-base}" ;;
-        *)
-            echo "❌ Error: Unsupported architecture '$host_arch'."
-            exit 1
-            ;;
-    esac
+    set_ros_image_for_host_arch
 }
 
-# 2. Install host dependencies (Flatpak, Fuse)
 install_host_dependencies() {
-    if ! command -v distrobox >/dev/null 2>&1; then
+    if ! has_command distrobox; then
         echo "❌ Error: distrobox is not installed (or not in PATH)."
         exit 1
     fi
 
-    if ! command -v flatpak >/dev/null 2>&1; then
+    if ! has_command flatpak; then
         echo "🛠️ Installing flatpak..."
         sudo apt-get update && sudo apt-get install -y flatpak || echo "Install flatpak manually."
     fi
 }
 
-# 3. Podman rootless fix (fuse-overlayfs for large images)
 apply_podman_rootless_fix() {
-    if command -v podman >/dev/null 2>&1; then
-        local storage_conf="$HOME/.config/containers/storage.conf"
+    has_command podman || return 0
 
-        if ! command -v fuse-overlayfs >/dev/null 2>&1; then
-            echo "🛠️ Installing fuse-overlayfs (required by Podman)..."
-            sudo apt-get update && sudo apt-get install -y fuse-overlayfs || true
-        fi
+    local storage_conf="$HOME/.config/containers/storage.conf"
 
-        if [[ ! -f "$storage_conf" ]] || ! grep -q "fuse-overlayfs" "$storage_conf"; then
-            echo "⚙️ Applying Podman storage configuration..."
-            mkdir -p "$(dirname "$storage_conf")"
-            cat <<EOF > "$storage_conf"
+    if ! has_command fuse-overlayfs; then
+        echo "🛠️ Installing fuse-overlayfs (required by Podman)..."
+        sudo apt-get update && sudo apt-get install -y fuse-overlayfs || true
+    fi
+
+    if ! has_fuse_overlay_config "$storage_conf"; then
+        echo "⚙️ Applying Podman storage configuration..."
+        mkdir -p "$(dirname "$storage_conf")"
+        cat <<EOF > "$storage_conf"
 [storage]
 driver = "overlay"
 
 [storage.options.overlay]
 mount_program = "/usr/bin/fuse-overlayfs"
 EOF
-            podman system reset -f >/dev/null 2>&1 || true
-            echo "✅ Podman fix applied."
-        fi
+        podman system reset -f >/dev/null 2>&1 || true
+        echo "✅ Podman fix applied."
     fi
 }
 
-# 4. Prepare isolated container home and symlinks
 setup_container_home() {
     if [[ ! -d "$DISTROBOX_HOME" ]]; then
         mkdir -p "$DISTROBOX_HOME"
@@ -101,42 +141,36 @@ setup_container_home() {
     fi
 }
 
-# 5. Create container if it does not exist
 create_container_if_missing() {
-    local container_exists=0
-    if distrobox list --no-color | tr -s ' ' | cut -d ' ' -f 3 | tail -n +2 | grep -q "^${CONTAINER_NAME}$"; then
-        container_exists=1
+    has_distrobox_container && return 0
+
+    echo "🚀 Creating Distrobox instance ($CONTAINER_NAME)..."
+    echo "📦 Using image: $ROS_IMAGE"
+
+    local nvidia_flag=""
+    if has_nvidia_gpu; then
+        nvidia_flag="--nvidia"
     fi
 
-    if [[ "$container_exists" -eq 0 ]]; then
-        echo "🚀 Creating Distrobox instance ($CONTAINER_NAME)..."
-        echo "📦 Using image: $ROS_IMAGE"
-
-        local nvidia_flag=""
-        if command -v lspci >/dev/null 2>&1 && lspci | grep -qi nvidia; then
-            nvidia_flag="--nvidia"
-        fi
-
-        local init_hooks="chsh -s /usr/bin/bash $USER"
-        if [[ "$ROS_DISTRO" != "humble" ]]; then
-            init_hooks="$init_hooks && (yes | sudo unminimize)"
-        fi
-
-        distrobox create \
-            --image "$ROS_IMAGE" \
-            --yes \
-            --name "$CONTAINER_NAME" \
-            --home "$DISTROBOX_HOME" \
-            --additional-packages "$ADDITIONAL_PACKAGES" \
-            --absolutely-disable-root-password-i-am-really-positively-sure \
-            --init-hooks "$init_hooks" \
-            $nvidia_flag \
-            --no-entry \
-            --additional-flags "--mount type=bind,source=/dev/bus/usb,target=/dev/bus/usb"
+    local init_hooks="chsh -s /usr/bin/bash $USER"
+    if ! is_humble_distro "$ROS_DISTRO"; then
+        init_hooks="$init_hooks && (yes | sudo unminimize)"
     fi
+
+    # shellcheck disable=SC2086
+    distrobox create \
+        --image "$ROS_IMAGE" \
+        --yes \
+        --name "$CONTAINER_NAME" \
+        --home "$DISTROBOX_HOME" \
+        --additional-packages "$ADDITIONAL_PACKAGES" \
+        --absolutely-disable-root-password-i-am-really-positively-sure \
+        --init-hooks "$init_hooks" \
+        $nvidia_flag \
+        --no-entry \
+        --additional-flags "--mount type=bind,source=/dev/bus/usb,target=/dev/bus/usb"
 }
 
-# 6. Configure container internals (ROS env, CycloneDDS)
 configure_container_internals() {
     distrobox enter "$CONTAINER_NAME" -- bash -lc "
         bashrc=\"\$HOME/.bashrc\"
@@ -166,7 +200,6 @@ EOF
     "
 }
 
-# 7. Enter the ready environment
 enter_container() {
     echo "✅ Environment ready. Entering container..."
     distrobox enter "$CONTAINER_NAME" -- /usr/bin/bash -i
@@ -182,7 +215,6 @@ main() {
     setup_container_home
     create_container_if_missing
     configure_container_internals
-
     enter_container
 }
 

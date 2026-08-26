@@ -5,27 +5,41 @@
 # Loaded by: ./scripts/setup.bash macros
 #
 
-if [[ -n "${_MACROS_LOADED:-}" ]]; then
-    return
-fi
+_macros_is_loaded() {
+    [[ -n "${_MACROS_LOADED:-}" ]]
+}
 
-if [[ "${_HOST_SETUP_AS_RCFILE:-}" == "1" ]]; then
-    unset _HOST_SETUP_AS_RCFILE
-    if [[ -f "${HOME}/.bashrc" ]]; then
-        # shellcheck disable=SC1090
-        source "${HOME}/.bashrc"
-        if [[ -n "${_MACROS_LOADED:-}" ]]; then
-            return
-        fi
+_macros_set_workspace_root() {
+    local host_setup_dir
+    host_setup_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    export ROS2_PROJECTS_WS_ROOT="$(cd "${host_setup_dir}/../.." && pwd)"
+}
+
+_macros_load_bashrc_if_rcfile() {
+    [[ "${_MACROS_SETUP_AS_RCFILE:-}" == "1" ]] || return 0
+    unset _MACROS_SETUP_AS_RCFILE
+
+    [[ -f "${HOME}/.bashrc" ]] || return 0
+    # shellcheck disable=SC1090
+    source "${HOME}/.bashrc"
+}
+
+_macros_load() {
+    if _macros_is_loaded; then
+        return 0
     fi
-fi
 
-export _MACROS_LOADED=1
+    _macros_load_bashrc_if_rcfile
+    if _macros_is_loaded; then
+        return 0
+    fi
 
-_host_setup_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export ROS2_PROJECTS_WS_ROOT="$(cd "${_host_setup_dir}/../.." && pwd)"
-unset _host_setup_dir
+    export _MACROS_LOADED=1
+    _macros_set_workspace_root
 
-# shellcheck disable=SC1091
-source "${ROS2_PROJECTS_WS_ROOT}/scripts/macros/sync.bash"
-sync_macros
+    # shellcheck disable=SC1091
+    source "${ROS2_PROJECTS_WS_ROOT}/scripts/macros/api/sync.bash"
+    sync_macros
+}
+
+_macros_load

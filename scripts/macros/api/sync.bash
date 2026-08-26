@@ -4,64 +4,20 @@
 # $ROS2_PROJECTS_WS_ROOT/build_ws/macros/<repo>/, then source those copies.
 # Usage: sync_macros
 
-_sync_macros_repo_from_path() {
-    # …/<repo>/scripts/macros → <repo>
-    local macros_dir="$1"
-    local scripts_dir
-    scripts_dir="$(dirname "$macros_dir")"
-    basename "$(dirname "$scripts_dir")"
-}
-
-_sync_macros_find_sources() {
-    local root="$1"
-    local src_root="${root}/src"
-    local macros_dir
-
-    if [[ -d "${root}/scripts/macros" ]]; then
-        printf '%s\n' "${root}/scripts/macros"
-    fi
-
-    [[ -d "$src_root" ]] || return 0
-
-    while IFS= read -r -d '' macros_dir; do
-        printf '%s\n' "$macros_dir"
-    done < <(
-        find "$src_root" -maxdepth 12 -type d -path '*/scripts/macros' \
-            -not -path '*/build/*' \
-            -not -path '*/build_ws/*' \
-            -not -path '*/install/*' \
-            -not -path '*/log/*' \
-            -not -path '*/.git/*' \
-            -print0 2>/dev/null
-    )
-}
-
-_sync_macros_extract_functions() {
-    local file="$1"
-    local line name
-    while IFS= read -r line; do
-        name="$(sed -E 's/^[[:space:]]*(function[[:space:]]+)?([a-zA-Z_][a-zA-Z0-9_]*)[[:space:]]*\(\).*/\2/' <<<"$line")"
-        [[ "$name" == _* ]] && continue
-        printf '%s\n' "$name"
-    done < <(grep -E '^[[:space:]]*(function[[:space:]]+)?[a-zA-Z_][a-zA-Z0-9_]*[[:space:]]*\(\)' "$file" 2>/dev/null || true)
-}
-
-_sync_macros_copy_bundle() {
-    local source_dir="$1"
-    local dest_dir="$2"
-    rm -rf "$dest_dir"
-    mkdir -p "$dest_dir"
-    cp -a "${source_dir}/." "$dest_dir/"
-}
+_macros_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck disable=SC1091
+source "${_macros_dir}/helpers/helpers_list.bash"
+unset _macros_dir
 
 sync_macros() {
-    local root="${ROS2_PROJECTS_WS_ROOT:-}"
-    if [[ -z "$root" ]]; then
+    if ! sync::_has_workspace_root; then
         echo "sync_macros: ROS2_PROJECTS_WS_ROOT is not set" >&2
         return 1
     fi
 
-    local dest_root="${root}/build_ws/macros"
+    local root="${ROS2_PROJECTS_WS_ROOT}"
+    local dest_root
+    dest_root="$(sync::_get_dest_root)"
     mkdir -p "$dest_root"
 
     local -a sources=()
@@ -69,7 +25,7 @@ sync_macros() {
     while IFS= read -r src; do
         [[ -n "$src" ]] || continue
         sources+=("$src")
-    done < <(_sync_macros_find_sources "$root")
+    done < <(sync::_find_sources "$root")
 
     declare -A repo_from=()
     local -a ordered_repos=()
@@ -77,7 +33,7 @@ sync_macros() {
     local collision=0
 
     for src in "${sources[@]}"; do
-        repo="$(_sync_macros_repo_from_path "$src")"
+        repo="$(sync::_get_repo_from_path "$src")"
         if [[ -n ${repo_from[$repo]:-} && ${repo_from[$repo]} != "$src" ]]; then
             echo "sync_macros: duplicate repo name '$repo':" >&2
             echo "  ${repo_from[$repo]}" >&2
@@ -100,7 +56,13 @@ sync_macros() {
         src="${repo_from[$repo]}"
         dest_dir="${dest_root}/${repo}"
         shopt -s nullglob
-        local -a bash_files=( "$src"/*.bash )
+        local -a bash_files=()
+        if [[ -d "${src}/api" ]]; then
+            bash_files=( "$src"/api/*.bash )
+        else
+            # Backward compatible: flat scripts/macros/*.bash
+            bash_files=( "$src"/*.bash )
+        fi
         shopt -u nullglob
         for file in "${bash_files[@]}"; do
             while IFS= read -r fn; do
@@ -114,7 +76,7 @@ sync_macros() {
                 fi
                 fn_from[$fn]="${src}/$(basename "$file")"
                 index_lines+=("${repo}	${src}	$(basename "$file")	${fn}")
-            done < <(_sync_macros_extract_functions "$file")
+            done < <(sync::_extract_functions "$file")
         done
     done
 
@@ -135,22 +97,9 @@ sync_macros() {
     for repo in "${ordered_repos[@]}"; do
         src="${repo_from[$repo]}"
         dest_dir="${dest_root}/${repo}"
-        _sync_macros_copy_bundle "$src" "$dest_dir"
+        sync::_copy_bundle "$src" "$dest_dir"
     done
 
     printf '%s\n' "${index_lines[@]}" > "${dest_root}/macros_index"
-
-    local had_nounset=0
-    if [[ $- == *u* ]]; then
-        had_nounset=1
-        set +u
-    fi
-    shopt -s nullglob
-    for file in "${dest_root}"/*/*.bash; do
-        source "$file"
-    done
-    shopt -u nullglob
-    if [[ "$had_nounset" -eq 1 ]]; then
-        set -u
-    fi
+    sync::_source_cache "$dest_root"
 }

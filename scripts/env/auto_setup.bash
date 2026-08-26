@@ -7,21 +7,39 @@
 # $ROS2_PROJECTS_WS_ROOT/build_ws/macros/.
 #
 
-if [[ -n "${_ENV_LOADED:-}" ]]; then
-    return
-fi
-export _ENV_LOADED=1
+_env_is_loaded() {
+    [[ -n "${_ENV_LOADED:-}" ]]
+}
 
-_env_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_env_set_loaded() {
+    export _ENV_LOADED=1
+}
 
-source "${_env_dir}/modules/ros2.bash"
-source "${_env_dir}/modules/display.bash"
+_env_get_dir() {
+    cd "$(dirname "${BASH_SOURCE[0]}")" && pwd
+}
 
-init_ros2_env
-set_local_display_if_available
-unset -f set_xauthority_from_local_candidates
+_env_load() {
+    if _env_is_loaded; then
+        return 0
+    fi
+    _env_set_loaded
 
-# shellcheck disable=SC1091
-source "${ROS2_PROJECTS_WS_ROOT}/scripts/macros/sync.bash"
-sync_macros
-unset _env_dir
+    local env_dir
+    env_dir="$(_env_get_dir)"
+
+    # shellcheck disable=SC1091
+    source "${env_dir}/modules/ros2.bash"
+    # shellcheck disable=SC1091
+    source "${env_dir}/modules/display.bash"
+
+    init_ros2_env
+    set_local_display_if_available
+    unset -f set_xauthority_from_local_candidates
+
+    # shellcheck disable=SC1091
+    source "${ROS2_PROJECTS_WS_ROOT}/scripts/macros/api/sync.bash"
+    sync_macros
+}
+
+_env_load
