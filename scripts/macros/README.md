@@ -1,6 +1,6 @@
 # Workspace macros
 
-Each repository keeps helpers in `scripts/macros/` (`*.bash` plus this README). The shell (`./scripts/setup.bash humble|jazzy|host`) copies those folders into a single cache and sources them from there.
+Each repository keeps helpers in `scripts/macros/` (`*.bash` plus this README). The shell (`./scripts/setup.bash humble|jazzy|macros`) copies those folders into a single cache and sources them from there.
 
 ## Convention for new repositories
 

@@ -2,7 +2,7 @@
 
 Ready-to-use ROS 2 environment in a Distrobox container, plus a shared macro system (`build`, `cbuild`, `diag`, …) — including macros from repositories under `src/`.
 
-- **Entry point:** `./scripts/setup.bash <humble|jazzy|host>`
+- **Entry point:** `./scripts/setup.bash <humble|jazzy [prod]|macros>`
 - **Macros:** documentation and convention → [scripts/macros/README.md](scripts/macros/README.md)
 
 ## Host requirements
@@ -23,7 +23,7 @@ From the workspace root:
 ```bash
 ./scripts/setup.bash humble
 ./scripts/setup.bash jazzy
-./scripts/setup.bash host
+./scripts/setup.bash macros
 ```
 
 `humble` / `jazzy` create (if needed) and enter container `ros2_projects_ws_<distro>`:
@@ -33,11 +33,22 @@ From the workspace root:
 - uses an isolated home under `.distrobox_<distro>/`
 - hooks `~/.bashrc` to auto-load `scripts/env/auto_setup.bash` (ROS, middleware, macros)
 
-`host` opens an interactive bash with workspace macros only (no Distrobox / no ROS). Use this on Git Bash for helpers such as `notaura_thesis_build`. `exit` returns to the previous shell.
+`macros` opens an interactive bash with workspace macros only (no Distrobox / no ROS). Use this on Git Bash for helpers such as `notaura_thesis_build`. `exit` returns to the previous shell.
 
-Optional: `source scripts/setup.bash host` loads macros in the current shell instead of opening a new one.
+Optional: `source scripts/setup.bash macros` loads macros in the current shell instead of opening a new one.
 
 Macros: [scripts/macros/README.md](scripts/macros/README.md).
+
+### TODO: production runtime (`prod`)
+
+CLI is reserved:
+
+```bash
+./scripts/setup.bash jazzy prod
+./scripts/setup.bash humble prod
+```
+
+Not implemented yet. Intended for an isolated production image (instead of Distrobox). Runtime engine (Docker or Podman) will be chosen at implementation time — the flag stays `prod`, not `docker` / `podman`.
 
 ## Work inside the container
 
@@ -78,19 +89,19 @@ Convention: each repo keeps `scripts/macros/*.bash` plus `README.md`. After the 
 
 Full documentation, the convention for new repos, and `build` / `cbuild` / `diag` / `sync_macros` → [scripts/macros/README.md](scripts/macros/README.md)
 
-`notaura_thesis_build` and other host-side helpers work with `./scripts/setup.bash host`. ROS `build` / `cbuild` still need Distrobox. Requires `latexmk` or `pdflatex` on the host (MiKTeX / TeX Live) for the thesis.
+`notaura_thesis_build` and other host-side helpers work with `./scripts/setup.bash macros`. ROS `build` / `cbuild` still need Distrobox. Requires `latexmk` or `pdflatex` on the host (MiKTeX / TeX Live) for the thesis.
 
 ## Project structure
 
 ```text
 scripts/
-  setup.bash            # ./scripts/setup.bash humble|jazzy|host
+  setup.bash            # ./scripts/setup.bash humble|jazzy [prod]|macros
   env/
     distrobox           # container create/enter
     auto_setup.bash     # sourced from container ~/.bashrc
     modules/            # ros2.bash, display.bash, cyclone-dds.xml
   host/
-    setup.bash          # macros only (no ROS)
+    setup.bash          # macros only (no ROS); CLI: macros
   macros/               # build.bash, diag.bash, sync.bash, README.md
 src/                    # subprojects (each may have scripts/macros/)
 build_ws/

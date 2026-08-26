@@ -1,8 +1,8 @@
 #!/usr/bin/bash
 
 #
-# Host-only macros (Git Bash / no Distrobox).
-# Loaded by: ./scripts/setup.bash host
+# Macros only (Git Bash / no Distrobox).
+# Loaded by: ./scripts/setup.bash macros
 #
 
 if [[ -n "${_MACROS_LOADED:-}" ]]; then

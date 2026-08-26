@@ -24,7 +24,7 @@ ADDITIONAL_PACKAGES="iputils-ping nano vim alsa-utils alsa pulseaudio git git-ma
 validate_and_set_architecture() {
     if [[ "$ROS_DISTRO" != "humble" && "$ROS_DISTRO" != "jazzy" ]]; then
         echo "❌ Error: Unsupported ROS distro: $ROS_DISTRO"
-        echo "Usage: ./scripts/setup.bash [humble|jazzy|host]"
+        echo "Usage: ./scripts/setup.bash [humble|jazzy [prod]|macros]"
         exit 1
     fi
 
@@ -139,9 +139,12 @@ create_container_if_missing() {
 # 6. Configure container internals (ROS env, CycloneDDS)
 configure_container_internals() {
     distrobox enter "$CONTAINER_NAME" -- bash -lc "
-        # Inject workspace environment into shell startup
-        if ! grep -q 'BEGIN ROS2_PROJECTS_WS_ENV' \"\$HOME/.bashrc\" 2>/dev/null; then
-            cat >> \"\$HOME/.bashrc\" <<EOF
+        bashrc=\"\$HOME/.bashrc\"
+        # Always refresh the workspace env hook (path may change across refactors).
+        if grep -q 'BEGIN ROS2_PROJECTS_WS_ENV' \"\$bashrc\" 2>/dev/null; then
+            sed -i '/# BEGIN ROS2_PROJECTS_WS_ENV/,/# END ROS2_PROJECTS_WS_ENV/d' \"\$bashrc\"
+        fi
+        cat >> \"\$bashrc\" <<EOF
 
 # BEGIN ROS2_PROJECTS_WS_ENV
 export ROS_DISTRO=\"$ROS_DISTRO\"
@@ -150,7 +153,6 @@ if [ -f \"$ENV_HOST_PATH\" ]; then
 fi
 # END ROS2_PROJECTS_WS_ENV
 EOF
-        fi
 
         # Install CycloneDDS RMW
         if command -v apt-get >/dev/null 2>&1; then
