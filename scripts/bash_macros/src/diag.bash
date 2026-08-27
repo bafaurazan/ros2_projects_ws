@@ -5,7 +5,7 @@
 
 _macros_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck disable=SC1091
-source "${_macros_dir}/helpers/helpers_list.bash"
+source "${_macros_dir}/include/helpers_list.bash"
 unset _macros_dir
 
 diag() {

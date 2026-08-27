@@ -51,12 +51,12 @@ _print_environment() {
 
 _get_expected_cyclone_uri() {
     [[ -n "${ROS2_PROJECTS_WS_ROOT:-}" ]] || return 1
-    printf '%s\n' "file://${ROS2_PROJECTS_WS_ROOT}/scripts/session/container/modules/cyclone-dds.xml"
+    printf '%s\n' "file://${ROS2_PROJECTS_WS_ROOT}/scripts/bash_container/config/cyclone-dds.xml"
 }
 
 _has_cyclone_xml() {
     [[ -n "${ROS2_PROJECTS_WS_ROOT:-}" \
-        && -f "${ROS2_PROJECTS_WS_ROOT}/scripts/session/container/modules/cyclone-dds.xml" ]]
+        && -f "${ROS2_PROJECTS_WS_ROOT}/scripts/bash_container/config/cyclone-dds.xml" ]]
 }
 
 _is_env_loaded() {
@@ -218,6 +218,6 @@ _print_macros() {
     done < <(load::_find_sources "${ROS2_PROJECTS_WS_ROOT}")
 
     if [[ "$found" -eq 0 ]]; then
-        echo "No scripts/macros/ bundles found."
+        echo "No scripts/bash_macros/ bundles found."
     fi
 }

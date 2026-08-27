@@ -1,6 +1,6 @@
 # scripts/
 
-Workspace entry, session bootstrap, and macros. CLI is always:
+Workspace entry and three ROS-like bash packages. CLI is always:
 
 ```bash
 ./scripts/setup.bash humble
@@ -13,35 +13,33 @@ Workspace entry, session bootstrap, and macros. CLI is always:
 
 | Command | What runs | Effect |
 |---|---|---|
-| `./scripts/setup.bash macros` | `session/macros/setup.bash` → `macros/api/load.bash` | Host shell (Git Bash); macros only, no ROS |
-| `./scripts/setup.bash jazzy` | `session/container/runtime/setup.bash` → `runtime/distrobox/setup.bash` → (container) `session/container/setup.bash` → `load.bash` | Distrobox + ROS + macros |
-| `./scripts/setup.bash jazzy prod` | `runtime/setup.bash` → `runtime/docker/setup.bash` | Stub until production runtime exists |
+| `./scripts/setup.bash macros` | `bash_bringup` → `macros_session` → `load_macros` | Host shell (Git Bash); macros only, no ROS |
+| `./scripts/setup.bash jazzy` | `bash_bringup` → `runtime_dispatch` → `distrobox_enter` → (container) `container_session` → `load_macros` | Distrobox + ROS + macros |
+| `./scripts/setup.bash jazzy prod` | `runtime_dispatch` → `docker_enter` | Stub until production runtime exists |
 
 `source scripts/setup.bash macros` loads macros in the current shell instead of opening a new one.
 
 ## Layout
 
 ```text
-setup.bash                         # CLI router only
-session/
-  macros/setup.bash                # host session → load_macros
-  container/
-    setup.bash                     # session inside runtime (hook from ~/.bashrc)
-    modules/                       # ROS, display, CycloneDDS
-    runtime/
-      setup.bash                   # host: pick Distrobox vs Docker
-      distrobox/                   # Distrobox create/enter + bashrc hook
-      docker/                      # prod stub
-macros/
-  api/load.bash                    # find + source all scripts/macros/ (root only)
-  api/build.bash                   # build, cbuild
-  api/diag.bash                    # diag
+setup.bash                              # source-aware wrapper → bash_bringup
+bash_bringup/
+  launch/bringup.bash                   # CLI router
+  src/macros_session.bash               # host macros session
+bash_container/
+  launch/runtime_dispatch.bash          # Distrobox vs Docker
+  src/container_session.bash            # in-container bootstrap (bashrc hook)
+  src/distrobox/distrobox_enter.bash
+  src/docker/docker_enter.bash          # prod stub
+  include/                              # ros2, display
+  config/                               # cyclone-dds.xml, *_config.bash
+bash_macros/
+  launch/load_macros.bash               # load_macros() — root only
+  src/build.bash                        # build, cbuild
+  src/diag.bash
+  include/                              # helpers
 ```
 
-Three `setup.bash` files under `session/container/` have different jobs:
+Convention: one public entry per package under `launch/`; implementation under `src/`.
 
-- `runtime/setup.bash` — host dispatcher
-- `runtime/distrobox/setup.bash` — Distrobox implementation
-- `container/setup.bash` — ROS + macros **inside** the runtime (shared by Distrobox and future Docker)
-
-Macros convention: [macros/README.md](macros/README.md)
+Macros convention: [bash_macros/README.md](bash_macros/README.md)

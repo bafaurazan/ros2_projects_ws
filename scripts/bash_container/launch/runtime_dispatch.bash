@@ -25,11 +25,11 @@ if [[ "$_mode" != "humble" && "$_mode" != "jazzy" ]]; then
 fi
 
 if [[ -z "$_runtime" ]]; then
-    exec "${_dir}/distrobox/setup.bash" "$_mode"
+    exec "${_dir}/../src/distrobox/distrobox_enter.bash" "$_mode"
 fi
 
 if [[ "$_runtime" == "prod" ]]; then
-    exec "${_dir}/docker/setup.bash" "$_mode" "$_runtime"
+    exec "${_dir}/../src/docker/docker_enter.bash" "$_mode" "$_runtime"
 fi
 
 echo "Error: unknown runtime '${_runtime}' (expected 'prod' or none)." >&2

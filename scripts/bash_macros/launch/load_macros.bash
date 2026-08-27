@@ -1,12 +1,12 @@
 #!/usr/bin/bash
 
-# Discover scripts/macros/ under the workspace and source public APIs in place.
+# Discover scripts/bash_macros/ under the workspace and source public APIs in place.
 # Usage: load_macros
 # Root workspace only — do not copy this file into a subrepo bundle.
 
 _macros_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck disable=SC1091
-source "${_macros_dir}/helpers/helpers_list.bash"
+source "${_macros_dir}/include/helpers_list.bash"
 unset _macros_dir
 
 load_macros() {

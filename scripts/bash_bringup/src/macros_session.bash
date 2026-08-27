@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 
 #
-# Host session (Git Bash / no ROS).
+# Host macros session (Git Bash / no ROS).
 # Loaded by: ./scripts/setup.bash macros
 #
 
@@ -38,7 +38,7 @@ _macros_load() {
     _macros_set_workspace_root
 
     # shellcheck disable=SC1091
-    source "${ROS2_PROJECTS_WS_ROOT}/scripts/macros/api/load.bash"
+    source "${ROS2_PROJECTS_WS_ROOT}/scripts/bash_macros/launch/load_macros.bash"
     load_macros
 }
 
