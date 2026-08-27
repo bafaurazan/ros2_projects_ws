@@ -6,7 +6,7 @@ set -euo pipefail
 
 _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
-source "${_dir}/config.bash" "${1:-}"
+source "${_dir}/../../config/distrobox_config.bash" "${1:-}"
 
 # ==============================================================================
 # Predicates / getters / setters

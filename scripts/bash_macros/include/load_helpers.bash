@@ -3,7 +3,7 @@
 # Private helpers for load_macros (short names). Bound to load::_* via helpers_list.bash.
 
 _get_repo_from_path() {
-    # …/<repo>/scripts/macros → <repo>
+    # …/<repo>/scripts/bash_macros → <repo>
     local macros_dir="$1"
     local scripts_dir
     scripts_dir="$(dirname "$macros_dir")"
@@ -19,8 +19,8 @@ _find_sources() {
     local src_root="${root}/src"
     local macros_dir
 
-    if [[ -d "${root}/scripts/macros" ]]; then
-        printf '%s\n' "${root}/scripts/macros"
+    if [[ -d "${root}/scripts/bash_macros" ]]; then
+        printf '%s\n' "${root}/scripts/bash_macros"
     fi
 
     [[ -d "$src_root" ]] || return 0
@@ -28,7 +28,7 @@ _find_sources() {
     while IFS= read -r -d '' macros_dir; do
         printf '%s\n' "$macros_dir"
     done < <(
-        find "$src_root" -maxdepth 12 -type d -path '*/scripts/macros' \
+        find "$src_root" -maxdepth 12 -type d -path '*/scripts/bash_macros' \
             -not -path '*/build/*' \
             -not -path '*/build_ws/*' \
             -not -path '*/install/*' \
@@ -42,12 +42,12 @@ _list_api_files() {
     local src="$1"
     local file
     shopt -s nullglob
-    if [[ -d "${src}/api" ]]; then
-        for file in "$src"/api/*.bash; do
+    if [[ -d "${src}/src" ]]; then
+        for file in "$src"/src/*.bash; do
             printf '%s\n' "$file"
         done
     else
-        # Backward compatible: flat scripts/macros/*.bash
+        # Backward compatible: flat scripts/bash_macros/*.bash
         for file in "$src"/*.bash; do
             printf '%s\n' "$file"
         done
@@ -83,7 +83,7 @@ _source_direct_files() {
     for src in "$@"; do
         while IFS= read -r file; do
             [[ -n "$file" ]] || continue
-            [[ "$(basename "$file")" == "load.bash" ]] && continue
+            [[ "$(basename "$file")" == "load_macros.bash" ]] && continue
             # shellcheck disable=SC1090
             source "$file"
         done < <(_list_api_files "$src")

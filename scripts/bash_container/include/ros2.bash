@@ -2,13 +2,13 @@
 
 # ROS 2 workspace context: distro, underlay, middleware, overlay prefix paths, cmake.
 
-get_workspace_root_from_modules() {
-    # scripts/session/container/modules → workspace root
-    cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd
+get_workspace_root_from_include() {
+    # scripts/bash_container/include → workspace root
+    cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd
 }
 
 set_workspace_root() {
-    export ROS2_PROJECTS_WS_ROOT="$(get_workspace_root_from_modules)"
+    export ROS2_PROJECTS_WS_ROOT="$(get_workspace_root_from_include)"
 }
 
 set_default_ros2_context() {
@@ -96,9 +96,10 @@ prefer_current_env_cmake() {
 }
 
 get_cyclone_dds_config_path() {
-    local modules_dir
-    modules_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    printf '%s\n' "${modules_dir}/cyclone-dds.xml"
+    local include_dir config_dir
+    include_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    config_dir="$(cd "${include_dir}/../config" && pwd)"
+    printf '%s\n' "${config_dir}/cyclone-dds.xml"
 }
 
 set_default_middleware() {

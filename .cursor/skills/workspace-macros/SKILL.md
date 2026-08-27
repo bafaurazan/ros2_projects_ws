@@ -1,6 +1,6 @@
 ---
 name: workspace-macros
-description: Add or change workspace shell macros under scripts/macros/. Use when creating a new macro, a scripts/macros bundle in a subrepo, or explaining load_macros and diag.
+description: Add or change workspace shell macros under scripts/bash_macros/. Use when creating a new macro, a scripts/bash_macros bundle in a subrepo, or explaining load_macros and diag.
 ---
 
 # Workspace macros
@@ -10,20 +10,20 @@ Macros are bash functions sourced in place. `load_macros` (run at shell start) d
 ## Bundle layout
 
 ```text
-<repo>/scripts/macros/
+<repo>/scripts/bash_macros/
   README.md
-  api/                       # public API (sourced)
+  src/                       # public API (sourced)
     my_macro.bash
-  helpers/                   # optional private helpers
+  include/                   # optional private helpers
     my_macro_helpers.bash
     helpers_list.bash
 ```
 
-Small repos may use a flat `scripts/macros/*.bash` instead of `api/`.
+Small repos may use a flat `scripts/bash_macros/*.bash` instead of `src/`.
 
 `<repo>` is the directory immediately above `scripts/` (root workspace or `src/<repo>/`).
 
-Root workspace only: `scripts/macros/api/load.bash` is the bootstrap. Do not add `load.bash` to a subrepo.
+Root workspace only: `scripts/bash_macros/launch/load_macros.bash` is the bootstrap. Do not add `load_macros.bash` to a subrepo.
 
 ## Rules
 
@@ -33,12 +33,12 @@ Root workspace only: `scripts/macros/api/load.bash` is the bootstrap. Do not add
 
 ## Helpers (larger macros)
 
-1. Short `_foo` helpers in `helpers/<api>_helpers.bash`
-2. Bind them in `helpers/helpers_list.bash` as `ns::_foo`
-3. In `api/*.bash`, source `helpers/helpers_list.bash` and call `ns::_…`
+1. Short `_foo` helpers in `include/<api>_helpers.bash`
+2. Bind them in `include/helpers_list.bash` as `ns::_foo`
+3. In `src/*.bash`, source `include/helpers_list.bash` and call `ns::_…`
 
 ## After adding a file
 
 Run `load_macros` or open a new `./scripts/setup.bash` shell, then `diag` to confirm the list.
 
-Details: [scripts/macros/README.md](scripts/macros/README.md)
+Details: [scripts/bash_macros/README.md](../../../scripts/bash_macros/README.md)
