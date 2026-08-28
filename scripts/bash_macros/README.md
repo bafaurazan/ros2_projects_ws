@@ -36,7 +36,7 @@ Do not copy root `src/load_macros.bash` into a subrepo. Root `launch/macros.bash
 2. Root bundle: register them in `include/helpers_list.bash` as `ns::_foo`
 3. In `src/*.bash`, call `ns::_…` from the public function
 
-TAB completion hides `*::*` and `_foo`; the functions stay in the shell.
+TAB completion hides `*::*` and `_foo` on the first shell word only; git and other subcommand completion are untouched. The functions stay in the shell.
 
 ## Core macros (this folder)
 

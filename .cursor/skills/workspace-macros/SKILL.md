@@ -35,7 +35,7 @@ Root workspace only: `scripts/bash_macros/src/load_macros.bash` is the bootstrap
 2. Root: bind them in `include/helpers_list.bash` as `ns::_foo`
 3. In `src/*.bash`, call `ns::_…`
 
-TAB completion hides `*::*` and `_foo`.
+TAB completion hides `*::*` and `_foo` on the first shell word only (does not affect `git` subcommands).
 
 ## After adding a file
 
