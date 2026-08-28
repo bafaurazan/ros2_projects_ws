@@ -46,11 +46,6 @@ _list_api_files() {
         for file in "$src"/src/*.bash; do
             printf '%s\n' "$file"
         done
-    else
-        # Backward compatible: flat scripts/bash_macros/*.bash
-        for file in "$src"/*.bash; do
-            printf '%s\n' "$file"
-        done
     fi
     shopt -u nullglob
 }
@@ -59,7 +54,6 @@ _extract_functions() {
     local file="$1"
     local line name
     while IFS= read -r line; do
-        # Allow optional namespace:: before the function name (ignored for public API).
         name="$(sed -E 's/^[[:space:]]*(function[[:space:]]+)?(([a-zA-Z_][a-zA-Z0-9_]*::)*)([a-zA-Z_][a-zA-Z0-9_]*)[[:space:]]*\(\).*/\4/' <<<"$line")"
         [[ "$name" == _* ]] && continue
         [[ "$line" == *::* ]] && continue
@@ -71,9 +65,16 @@ _has_nounset() {
     [[ $- == *u* ]]
 }
 
+_source_bundle_macros() {
+    local bundle="$1"
+    [[ -f "${bundle}/launch/macros.bash" ]] || return 0
+    # shellcheck disable=SC1091
+    source "${bundle}/launch/macros.bash"
+}
+
 _source_direct_files() {
     local had_nounset=0
-    local src file
+    local src
 
     if _has_nounset; then
         had_nounset=1
@@ -81,12 +82,7 @@ _source_direct_files() {
     fi
 
     for src in "$@"; do
-        while IFS= read -r file; do
-            [[ -n "$file" ]] || continue
-            [[ "$(basename "$file")" == "load_macros.bash" ]] && continue
-            # shellcheck disable=SC1090
-            source "$file"
-        done < <(_list_api_files "$src")
+        _source_bundle_macros "$src"
     done
 
     if [[ "$had_nounset" -eq 1 ]]; then

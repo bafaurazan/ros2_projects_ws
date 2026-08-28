@@ -75,8 +75,9 @@ _run_macros() {
     if _is_sourced; then
         # shellcheck disable=SC1090
         source "$macros_session"
+        _macros_status=$?
         _cleanup
-        return 0
+        return "$_macros_status"
     fi
 
     export _MACROS_SETUP_AS_RCFILE=1

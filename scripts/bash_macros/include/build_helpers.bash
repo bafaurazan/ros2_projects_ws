@@ -2,6 +2,24 @@
 
 # Private helpers for build/cbuild (short names). Bound to build::_* via helpers_list.bash.
 
+_require_ros_toolchain() {
+    local mode="${1:-cbuild}"
+    local -a missing=()
+
+    command -v ros2 >/dev/null 2>&1 || missing+=(ros2)
+    command -v colcon >/dev/null 2>&1 || missing+=(colcon)
+    if [[ "$mode" == build ]]; then
+        command -v rosdep >/dev/null 2>&1 || missing+=(rosdep)
+    fi
+
+    ((${#missing[@]} == 0)) && return 0
+
+    echo "Error: ROS 2 build toolchain not available (missing: ${missing[*]})." >&2
+    echo "Run build/cbuild inside Distrobox: ./scripts/setup.bash jazzy|humble (native Linux only)." >&2
+    echo "On Windows/Git Bash use ./scripts/setup.bash macros for host helpers (e.g. notaura_ws_import_repos)." >&2
+    return 1
+}
+
 _has_src_dir() {
     [[ -d "./src" ]]
 }
@@ -68,7 +86,7 @@ _install_apt_packages() {
         while IFS= read -r apt_pkg; do
             apt_pkg="$(echo "$apt_pkg" | sed 's/\s*#.*$//g' | xargs)"
             [[ -n "$apt_pkg" ]] || continue
-            sudo apt-get install -y "$apt_pkg"
+            sudo apt-get install -y "$apt_pkg" || return 1
         done < "$apt_file"
     done < <(find ./src -type f -name apt_packages.txt)
 }
@@ -89,7 +107,7 @@ _install_pip_requirements() {
 
     while IFS= read -r req_file; do
         [[ -n "$req_file" ]] || continue
-        "$pip_python" -m pip install "${pip_args[@]}" "$req_file"
+        "$pip_python" -m pip install "${pip_args[@]}" "$req_file" || return 1
     done < <(find ./src -type f -name requirements.txt)
 }
 

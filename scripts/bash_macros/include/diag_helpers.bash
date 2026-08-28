@@ -116,105 +116,134 @@ _print_checks() {
     [[ "$ok" == true ]]
 }
 
-_extract_function_description() {
-    local file="$1"
-    local fn="$2"
-    local line stripped text
-    local -a comments=()
-    local in_comment_block=0
-    local found=0
+_get_term_width() {
+    local w="${COLUMNS:-}"
+    if [[ -z "$w" ]] && command -v tput >/dev/null 2>&1; then
+        w="$(tput cols 2>/dev/null || true)"
+    fi
+    [[ "$w" =~ ^[0-9]+$ ]] || w=72
+    if (( w > 72 )); then
+        w=72
+    fi
+    if (( w < 40 )); then
+        w=40
+    fi
+    printf '%s\n' "$w"
+}
 
-    while IFS= read -r line || [[ -n "$line" ]]; do
-        stripped="${line#"${line%%[![:space:]]*}"}"
-
-        if [[ "$stripped" == \#!* ]]; then
-            comments=()
-            in_comment_block=0
-            continue
-        fi
-
-        if [[ "$stripped" == \#* ]]; then
-            if [[ "$in_comment_block" -eq 0 ]]; then
-                comments=()
-                in_comment_block=1
-            fi
-            text="${stripped#\#}"
-            text="${text# }"
-            comments+=("$text")
-            continue
-        fi
-
-        if [[ -z "$stripped" ]]; then
-            in_comment_block=0
-            continue
-        fi
-
-        in_comment_block=0
-        if [[ "$stripped" =~ ^(function[[:space:]]+)?${fn}[[:space:]]*\(\) ]]; then
-            found=1
-            break
-        fi
-        comments=()
-    done < "$file"
-
-    if [[ "$found" -eq 1 && ${#comments[@]} -gt 0 ]]; then
-        local candidate
-        for candidate in "${comments[@]}"; do
-            [[ -z "$candidate" ]] && continue
-            [[ "$candidate" == Usage:* ]] && continue
-            printf '%s\n' "$candidate"
-            return 0
+_wrap_text() {
+    local text="$1"
+    local indent="$2"
+    local width prefix
+    width="$(_get_term_width)"
+    width=$((width - indent))
+    if (( width < 20 )); then
+        width=20
+    fi
+    prefix="$(printf '%*s' "$indent" '')"
+    if command -v fold >/dev/null 2>&1; then
+        printf '%s\n' "$text" | fold -s -w "$width" | while IFS= read -r line || [[ -n "$line" ]]; do
+            printf '%s%s\n' "$prefix" "$line"
         done
-        candidate="${comments[0]}"
-        candidate="${candidate#Usage:}"
-        candidate="${candidate# }"
-        printf '%s\n' "$candidate"
         return 0
     fi
+    printf '%s%s\n' "$prefix" "$text"
+}
 
-    while IFS= read -r line; do
+_parse_macro_registry() {
+    local launch_file="$1"
+    local in_block=0
+    local name=""
+    local desc=""
+    local line stripped
+
+    [[ -f "$launch_file" ]] || return 0
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line%$'\r'}"
         stripped="${line#"${line%%[![:space:]]*}"}"
-        [[ "$stripped" == \#!* ]] && continue
         if [[ "$stripped" == \#* ]]; then
-            text="${stripped#\#}"
-            text="${text# }"
-            [[ -n "$text" ]] || continue
-            printf '%s\n' "$text"
+            stripped="${stripped#\#}"
+            stripped="${stripped# }"
+        fi
+
+        if [[ "$stripped" == "@macros-begin" ]]; then
+            in_block=1
+            continue
+        fi
+        if [[ "$stripped" == "@macros-end" ]]; then
+            if [[ -n "$name" ]]; then
+                printf '%s\t%s\n' "$name" "$desc"
+            fi
             return 0
         fi
-        [[ -n "$stripped" ]] && break
-    done < "$file"
+        [[ "$in_block" -eq 1 ]] || continue
+        [[ -n "$stripped" ]] || continue
+
+        if [[ "$stripped" == macro\ * ]]; then
+            if [[ -n "$name" ]]; then
+                printf '%s\t%s\n' "$name" "$desc"
+            fi
+            name="${stripped#macro }"
+            name="${name%%[[:space:]]*}"
+            desc=""
+            continue
+        fi
+
+        if [[ -n "$name" ]]; then
+            text="${stripped#"${stripped%%[![:space:]]*}"}"
+            [[ -n "$text" ]] || continue
+            if [[ -n "$desc" ]]; then
+                desc+=" ${text}"
+            else
+                desc="$text"
+            fi
+        fi
+    done < "$launch_file"
+
+    if [[ -n "$name" ]]; then
+        printf '%s\t%s\n' "$name" "$desc"
+    fi
+}
+
+_print_macro_block() {
+    local fn="$1"
+    local description="$2"
+    printf '  %s\n' "$fn"
+    if [[ -n "$description" ]]; then
+        _wrap_text "$description" 4
+    else
+        printf '    (no description)\n'
+    fi
+    echo
 }
 
 _print_macros() {
-    echo "=== Available macros ==="
+    echo "=== Macros ==="
 
     if [[ -z "${ROS2_PROJECTS_WS_ROOT:-}" ]]; then
         echo "ROS2_PROJECTS_WS_ROOT is not set. Run ./scripts/setup.bash first."
         return 0
     fi
 
-    local src repo file fn description
+    local src repo fn description
     local found=0
+    local launch_file
 
     while IFS= read -r src; do
         [[ -n "$src" ]] || continue
         found=1
         repo="$(load::_get_repo_from_path "$src")"
         echo
-        echo "[$repo]  $src"
-        while IFS= read -r file; do
-            [[ -n "$file" ]] || continue
-            while IFS= read -r fn; do
-                [[ -n "$fn" ]] || continue
-                description="$(diag::_extract_function_description "$file" "$fn")"
-                if [[ -n "$description" ]]; then
-                    printf '  %-16s  %s\n' "$fn" "$description"
-                else
-                    printf '  %-16s  (%s)\n' "$fn" "$(basename "$file")"
-                fi
-            done < <(load::_extract_functions "$file")
-        done < <(load::_list_api_files "$src")
+        echo "[$repo]"
+        launch_file="${src}/launch/macros.bash"
+        while IFS=$'\t' read -r fn description; do
+            [[ -n "$fn" ]] || continue
+            if ! declare -F "$fn" >/dev/null 2>&1; then
+                echo "diag: registry macro '${fn}' not defined in src/" >&2
+            fi
+            _print_macro_block "$fn" "$description"
+        done < <(_parse_macro_registry "$launch_file")
     done < <(load::_find_sources "${ROS2_PROJECTS_WS_ROOT}")
 
     if [[ "$found" -eq 0 ]]; then

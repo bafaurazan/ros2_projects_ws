@@ -38,8 +38,17 @@ _macros_load() {
     _macros_set_workspace_root
 
     # shellcheck disable=SC1091
-    source "${ROS2_PROJECTS_WS_ROOT}/scripts/bash_macros/launch/load_macros.bash"
-    load_macros
+    source "${ROS2_PROJECTS_WS_ROOT}/scripts/bash_macros/launch/macros.bash"
+    load_macros || return 1
+
+    # shellcheck disable=SC1091
+    source "${ROS2_PROJECTS_WS_ROOT}/scripts/bash_macros/include/completion.bash"
+    _macros_install_completion_filter
 }
 
-_macros_load
+if ! _macros_load; then
+    if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+        exit 1
+    fi
+    return 1
+fi

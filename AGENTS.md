@@ -12,7 +12,7 @@ From the workspace root:
 ./scripts/setup.bash macros
 ```
 
-`humble` / `jazzy` enter Distrobox (`ros2_projects_ws_<distro>`). `macros` loads shell macros only (Git Bash / host; no ROS).
+`humble` / `jazzy` enter Distrobox (`ros2_projects_ws_<distro>`) on **native Linux**. `macros` loads shell macros only (Git Bash / host; no ROS). Distrobox is not supported on Windows or WSL.
 
 Script layout: [scripts/README.md](scripts/README.md).
 
@@ -22,8 +22,8 @@ Available after setup. Names must be unique across all `scripts/bash_macros/` bu
 
 - `build [colcon args...]` — rosdep / apt / pip, then `cbuild`. Requires `./src` in CWD.
 - `cbuild [colcon args...]` — colcon into `./build_ws/build_<ROS_DISTRO>/`, `install_*`, `log_*`.
-- `diag` — env checks and a live list of macros (name, source path, description).
-- `load_macros` — rediscover `scripts/bash_macros/` and source public APIs in place (no copy).
+- `diag` — env checks and a live list of public macros (grouped by repo).
+- `load_macros` — rediscover `scripts/bash_macros/` and source `launch/macros.bash` in place (no copy).
 
 Convention and layout: [scripts/bash_macros/README.md](scripts/bash_macros/README.md).
 

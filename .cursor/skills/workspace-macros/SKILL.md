@@ -5,37 +5,37 @@ description: Add or change workspace shell macros under scripts/bash_macros/. Us
 
 # Workspace macros
 
-Macros are bash functions sourced in place. `load_macros` (run at shell start) discovers bundles and `source`s public APIs. Nothing is copied to `build_ws/`.
+Macros are bash functions sourced in place. `load_macros` (run at shell start) discovers bundles and sources `launch/macros.bash`. Nothing is copied to `build_ws/`.
 
 ## Bundle layout
 
 ```text
 <repo>/scripts/bash_macros/
   README.md
-  src/                       # public API (sourced)
+  launch/macros.bash     # @macros registry + source src/*.bash
+  src/                   # implementations
     my_macro.bash
-  include/                   # optional private helpers
+  include/               # optional private helpers
     my_macro_helpers.bash
-    helpers_list.bash
 ```
-
-Small repos may use a flat `scripts/bash_macros/*.bash` instead of `src/`.
 
 `<repo>` is the directory immediately above `scripts/` (root workspace or `src/<repo>/`).
 
-Root workspace only: `scripts/bash_macros/launch/load_macros.bash` is the bootstrap. Do not add `load_macros.bash` to a subrepo.
+Root workspace only: `scripts/bash_macros/src/load_macros.bash` is the bootstrap. Do not add `load_macros.bash` to a subrepo. List `load_macros` in the root `launch/macros.bash` registry only.
 
 ## Rules
 
 - Public function names must be unique across all bundles. `load_macros` aborts on collisions.
 - Names starting with `_` or containing `::` are not public macros.
-- Put a one-line description comment above each public function (and a `# Usage:` line). `diag` prints name, source path, and that description.
+- Put user-facing descriptions in `launch/macros.bash` (`# macro name` plus comment lines). `diag` prints those, grouped by repo, with wrapped text.
 
 ## Helpers (larger macros)
 
 1. Short `_foo` helpers in `include/<api>_helpers.bash`
-2. Bind them in `include/helpers_list.bash` as `ns::_foo`
-3. In `src/*.bash`, source `include/helpers_list.bash` and call `ns::_…`
+2. Root: bind them in `include/helpers_list.bash` as `ns::_foo`
+3. In `src/*.bash`, call `ns::_…`
+
+TAB completion hides `*::*` and `_foo`.
 
 ## After adding a file
 

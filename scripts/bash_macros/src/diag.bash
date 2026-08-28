@@ -1,7 +1,6 @@
 #!/usr/bin/bash
 
-# Print system/tools/env info, verify env setup settings, and list available macros
-# (name, source path, description from comments).
+# Usage: diag
 
 _macros_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck disable=SC1091

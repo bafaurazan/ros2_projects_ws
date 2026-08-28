@@ -1,8 +1,6 @@
 #!/usr/bin/bash
 
-# Discover scripts/bash_macros/ under the workspace and source public APIs in place.
 # Usage: load_macros
-# Root workspace only — do not copy this file into a subrepo bundle.
 
 _macros_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck disable=SC1091

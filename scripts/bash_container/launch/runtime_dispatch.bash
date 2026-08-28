@@ -25,6 +25,9 @@ if [[ "$_mode" != "humble" && "$_mode" != "jazzy" ]]; then
 fi
 
 if [[ -z "$_runtime" ]]; then
+    # shellcheck disable=SC1091
+    source "${_dir}/../include/platform.bash"
+    platform::require_native_linux_for_distrobox || exit 1
     exec "${_dir}/../src/distrobox/distrobox_enter.bash" "$_mode"
 fi
 

@@ -1,6 +1,6 @@
 # ROS2 Projects Workspace
 
-Ready-to-use ROS 2 environment in a Distrobox container, plus a shared macro system (`build`, `cbuild`, `diag`, …) — including macros from repositories under `src/`.
+Ready-to-use ROS 2 environment in a Distrobox container, plus a shared macro system (`build`, `cbuild`, `diag`, `latex`, …) — including macros from repositories under `src/`.
 
 - **Entry point:** `./scripts/setup.bash <humble|jazzy [prod]|macros>`
 - **Scripts layout:** [scripts/README.md](scripts/README.md)
@@ -9,7 +9,7 @@ Ready-to-use ROS 2 environment in a Distrobox container, plus a shared macro sys
 
 ## Host requirements
 
-Tested with **Podman** and **Distrobox** (curl install):
+Tested with **Podman** and **Distrobox** on **native Linux** (curl install):
 
 ```bash
 sudo apt install podman
@@ -17,6 +17,8 @@ curl -fsSL https://raw.githubusercontent.com/89luca89/distrobox/legacy/install |
 ```
 
 You do not need ROS, `colcon`, or `rosdep` on the host — they come from the container.
+
+On **Windows / Git Bash**, use `./scripts/setup.bash macros` only. Distrobox (`humble` / `jazzy`) is not supported on Windows or WSL.
 
 ## Start
 
@@ -28,14 +30,14 @@ From the workspace root:
 ./scripts/setup.bash macros
 ```
 
-`humble` / `jazzy` create (if needed) and enter container `ros2_projects_ws_<distro>`:
+`humble` / `jazzy` create (if needed) and enter container `ros2_projects_ws_<distro>` (native Linux):
 
 - picks a ROS image (`desktop-full` on x86_64, `ros-base` on arm)
 - installs CycloneDDS RMW, git, pip, USB tools, and related packages in the container
 - uses an isolated home under `.distrobox_<distro>/`
 - hooks `~/.bashrc` to auto-load `scripts/bash_container/src/container_session.bash` (ROS, middleware, macros)
 
-`macros` opens an interactive bash with workspace macros only (no Distrobox / no ROS). Use this on Git Bash for helpers such as `notaura_thesis_build`. `exit` returns to the previous shell.
+`macros` opens an interactive bash with workspace macros only (no Distrobox / no ROS). Use this on Git Bash for helpers such as `latex` and `notaura_ws_import_repos`. `exit` returns to the previous shell.
 
 Optional: `source scripts/setup.bash macros` loads macros in the current shell instead of opening a new one.
 
@@ -58,7 +60,7 @@ Not implemented yet. Intended for an isolated production image (instead of Distr
 
 ### build
 
-Installs dependencies (rosdep, apt, pip) and builds the workspace.
+Installs dependencies (rosdep, apt, pip) and builds the workspace. Stops on the first failed step. Requires ROS 2 (`ros2`, `rosdep`, `colcon`).
 
 ```bash
 build
@@ -67,7 +69,7 @@ build --packages-select my_pkg
 
 ### cbuild
 
-Colcon only (no dependency install). Extra arguments are passed to `colcon build`.
+Colcon only (no dependency install). Extra arguments are passed to `colcon build`. Does not source the install overlay if colcon fails.
 
 ```bash
 cbuild
@@ -82,11 +84,11 @@ Implementation details: [scripts/bash_macros/README.md](scripts/bash_macros/READ
 
 ## Macros
 
-Convention: each repo keeps `scripts/bash_macros/` (`src/*.bash`, optional `include/`, `README.md`). After the shell starts, `load_macros` sources those public APIs from their original paths.
+Convention: each repo keeps `scripts/bash_macros/` with `launch/macros.bash` (descriptions + loader), `src/*.bash` (logic), optional `include/`. After the shell starts, `load_macros` sources those bundles.
 
-Full documentation, the convention for new repos, and `build` / `cbuild` / `diag` / `load_macros` → [scripts/bash_macros/README.md](scripts/bash_macros/README.md)
+Full documentation: [scripts/bash_macros/README.md](scripts/bash_macros/README.md)
 
-`notaura_thesis_build` and other host-side helpers work with `./scripts/setup.bash macros`. ROS `build` / `cbuild` still need Distrobox. Requires `latexmk` or `pdflatex` on the host (MiKTeX / TeX Live) for the thesis.
+`latex` and `notaura_ws_import_repos` work with `./scripts/setup.bash macros`. ROS `build` / `cbuild` need Distrobox on native Linux. `latex` prefers Docker `texlive/texlive` (on Windows start Docker Desktop first); otherwise host `latexmk` / `pdflatex`.
 
 ## Project structure
 
@@ -98,7 +100,7 @@ scripts/
   README.md
   bash_bringup/         # CLI router + host macros session
   bash_container/       # Distrobox/Docker runtime + in-container session
-  bash_macros/          # launch/load_macros.bash, src/, include/
+  bash_macros/          # launch/macros.bash, src/, include/
 src/                    # subprojects (each may have scripts/bash_macros/, .cursor/, AGENTS.md)
 build_ws/               # per-project colcon artifacts (created in CWD by build/cbuild)
 ```

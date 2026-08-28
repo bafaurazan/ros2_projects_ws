@@ -34,10 +34,14 @@ _macros_bind_namespace diag \
     _has_cyclone_xml \
     _is_env_loaded \
     _print_checks \
-    _extract_function_description \
+    _get_term_width \
+    _wrap_text \
+    _parse_macro_registry \
+    _print_macro_block \
     _print_macros
 
 _macros_bind_namespace build \
+    _require_ros_toolchain \
     _has_src_dir \
     _get_ros_distro \
     _get_artifacts_dir \
@@ -56,6 +60,7 @@ _macros_bind_namespace load \
     _list_api_files \
     _extract_functions \
     _has_nounset \
+    _source_bundle_macros \
     _source_direct_files
 
 unset -f _macros_bind_namespace

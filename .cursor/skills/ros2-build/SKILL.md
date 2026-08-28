@@ -5,7 +5,7 @@ description: Build ROS 2 packages in this workspace with build (deps + colcon) o
 
 # ROS 2 build
 
-Work inside Distrobox (`./scripts/setup.bash humble` or `jazzy`). Host `macros` mode has no ROS.
+Work inside Distrobox (`./scripts/setup.bash humble` or `jazzy`) on **native Linux**. Host `macros` mode has no ROS; `build` / `cbuild` refuse to run without `ros2` / `colcon`.
 
 ## Where to run
 

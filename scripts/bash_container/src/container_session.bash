@@ -38,8 +38,12 @@ _env_load() {
     unset -f set_xauthority_from_local_candidates
 
     # shellcheck disable=SC1091
-    source "${ROS2_PROJECTS_WS_ROOT}/scripts/bash_macros/launch/load_macros.bash"
-    load_macros
+    source "${ROS2_PROJECTS_WS_ROOT}/scripts/bash_macros/launch/macros.bash"
+    load_macros || return 1
+
+    # shellcheck disable=SC1091
+    source "${ROS2_PROJECTS_WS_ROOT}/scripts/bash_macros/include/completion.bash"
+    _macros_install_completion_filter
 }
 
 _env_load
