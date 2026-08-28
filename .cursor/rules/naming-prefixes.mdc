@@ -1,0 +1,69 @@
+---
+description: Semantyczne prefiksy nazw (is/has/get/set/try) — kiedy używać i kiedy nie
+alwaysApply: true
+---
+
+# Semantyczne prefiksy nazw
+
+Prefiks opisuje **typ zachowania**, nie jest ozdobą. Używaj go, gdy poprawia czytelność; inaczej zostaw czysty czasownik domenowy. Dotyczy **nowego kodu** — nie refaktoruj legacy bez prośby.
+
+## Główne prefiksy (funkcje / metody)
+
+| Prefiks | Zwraca | Pytanie / sens | Dobry przykład | Zły przykład |
+|---------|--------|----------------|----------------|--------------|
+| `is` / `Is` | `bool` | „czy teraz X?” (stan) | `IsEmergencyStopStateConfirmed()`, `is_wsl()` | `is_velocity()` zwracające `int` |
+| `has` / `Has` | `bool` | „czy istnieje / jest dostępne?” | `has_ros2_setup()`, `HasActiveVelocityInterface()` | `has_velocity` gdy chodzi o wartość, nie bool |
+| `get` / `Get` | wartość | odczyt bez zmiany stanu | `get_ros2_setup_path()`, `GetActualVelocityCh1()` | `GetAndSendVelocity()` — ma efekt uboczny |
+| `set` / `Set` | `void` lub `bool` | zapis / konfiguracja stanu | `set_default_middleware()`, `SetMotorsVelocity()` | `set_velocity` gdy tylko odczytuje |
+| `try` / `Try` | `bool` / `optional` | operacja, która może się nie udać | `TryClearErrors()`, `TryConfirmEmergencyStopState()` | `try_stop` gdy zawsze się udaje |
+
+`set_` / `Set` — **tylko funkcje**, nigdy pole klasy. Różnica `is` vs `has`: `has_errors` = „istnieją błędy”; `is_in_error_state` = „jesteśmy w stanie błędu”. Opcjonalnie `can_` / `Can` dla uprawnienia („czy wolno?”).
+
+## C++ — pola vs metody (ważne)
+
+Prefiksy `Is` / `Has` / `Get` / `Set` / `Try` idą na **metody**. Pola klasy to **dane**, nie wywołania:
+
+```cpp
+// Pola bool — przymiotnik / imiesłów, bez is_/has_; trailing _
+std::atomic<bool> hv_active_{false};
+std::atomic<bool> hv_enable_requested_{false};
+std::atomic<bool> estop_state_confirmed_{false};
+std::atomic<bool> command_loop_running_{false};
+
+// Metody — prefiks Is/Has/Get/Set
+bool IsHvActive() const { return hv_active_.load(); }
+bool IsMotionAllowed() const;
+bool SetMotorsVelocity(int32_t ch1, int32_t ch2);
+
+// Lokalne zmienne bool — is_/has_ OK
+const bool is_entering_software_estop = ...;
+```
+
+Źle na polu: `is_48v_active_`, `set_48v_active_` (brzmi jak funkcja). Dobrze: para `hv_enable_requested_` (żądanie) vs `hv_active_` (faktyczny stan).
+
+## Dodatkowe prefiksy
+
+- `wait_` / `Wait` — blokujące oczekiwanie (`WaitForEmergencyStopConfirmed`)
+- `check_` / `Check` — walidacja / warunek czasowy (`CheckVelocityTimeout`)
+- `on_` / `On` — callback (`OnFrameImpl`, `on_activate`)
+- `parse_` / `Parse` — konwersja wejścia (`ParseHexId`)
+- `create_` / `make_` — fabryka (`create_publisher`, `std::make_shared`)
+- `require_` / `ensure_` — musi być spełnione, inaczej błąd
+
+## Bez prefiksu
+
+Czysty czasownik gdy nazwa to **akcja** lub **transformacja**: `StopMotors()`, `build()`, `ActivateRelayModuleIO()`, `RpmToLinearVelocity`.
+
+## Konwencje per język
+
+| Język | Funkcje / metody | Zmienne lokalne | Pola klasy (C++) |
+|-------|------------------|-----------------|------------------|
+| Bash | `is_foo`, `has_foo`, `get_foo`, `set_foo` | `is_foo`, `has_foo` | — |
+| C++ | `IsFoo`, `HasFoo`, `GetFoo`, `SetFoo`, `TryFoo` | `is_foo`, `has_foo` | `foo_active_`, `thread_running_` (bez `is_`) |
+| Python | `is_foo`, `has_foo`, `get_foo`, `set_foo` | `is_foo`, `has_foo` | `self._foo_active` |
+
+Prywatne helpery bash: `_is_foo`, `_has_foo` (np. `_has_src_dir`).
+
+## Wykluczenia
+
+Nie zmieniaj API zewnętrznych: `rclcpp::get_logger`, `get_command` / `set_state` (ros2_control), override’y (`GetFilter`), ROS lifecycle.
