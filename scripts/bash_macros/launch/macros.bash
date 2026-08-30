@@ -11,6 +11,9 @@
 #   Print system/tools/env info, verify env setup, and list macros.
 # macro load_macros
 #   Rediscover scripts/bash_macros/ bundles and re-source launch/macros.bash.
+# macro importer
+#   Clone a registered subrepo (develop) on first use; no-op if
+#   already present. Usage: importer transporter|notaura_ws
 # @macros-end
 
 _bundle_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

@@ -37,7 +37,7 @@ bash_container/
   config/                               # cyclone-dds.xml, *_config.bash
 bash_macros/
   launch/macros.bash                    # @macros registry + source src/*.bash
-  src/                                  # build, cbuild, diag, load_macros
+  src/                                  # build, cbuild, diag, load_macros, importer
   include/                              # helpers + TAB completion filter
 ```
 

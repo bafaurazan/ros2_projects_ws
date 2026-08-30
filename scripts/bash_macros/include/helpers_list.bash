@@ -13,6 +13,8 @@ source "${_helpers_dir}/diag_helpers.bash"
 source "${_helpers_dir}/build_helpers.bash"
 # shellcheck disable=SC1091
 source "${_helpers_dir}/load_helpers.bash"
+# shellcheck disable=SC1091
+source "${_helpers_dir}/importer_helpers.bash"
 
 _macros_bind_namespace() {
     local namespace="$1"
@@ -62,6 +64,13 @@ _macros_bind_namespace load \
     _has_nounset \
     _source_bundle_macros \
     _source_direct_files
+
+_macros_bind_namespace importer \
+    _get_importer_url \
+    _get_importer_branch \
+    _get_importer_dir \
+    _list_importer_targets \
+    _ensure_importer_repo
 
 unset -f _macros_bind_namespace
 unset _helpers_dir
