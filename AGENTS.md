@@ -25,7 +25,7 @@ Available after setup. Names must be unique across all `scripts/bash_macros/` bu
 - `diag` — env checks and a live list of public macros (grouped by repo).
 - `load_macros` — rediscover `scripts/bash_macros/` and source `launch/macros.bash` in place (no copy).
 - `importer transporter|notaura_ws` — clone that repo under `src/` (branch `develop`) on first use, then `load_macros`. No-op if already present. Tries `github.com`, then SSH aliases for `github.com` from `~/.ssh/config`.
-- `tr_pub [-y|--yes] [-clear] [path]` / `tr_sub [-y|--yes] [-clear]` — after `importer transporter`: `tr_pub` copies into `inbox/` (optional), commits local changes, then pull+push commits ahead of the remote. `tr_sub` is fetch+pull and fails if the tree is dirty. `-clear` resets history (`tr_pub`: squash + force-push; `tr_sub`: `reset --hard` to remote). `-y` skips collision and `-clear` prompts.
+- `tr_pub [-y|--yes] [-clear] [path ...]` / `tr_sub [-y|--yes] [-clear]` — after `importer transporter`: `tr_pub` copies into `inbox/` (optional, one or more paths), commits local changes, then pull+push commits ahead of the remote. `tr_sub` is fetch+pull and fails if the tree is dirty. `-clear` resets history (`tr_pub`: squash + force-push; `tr_sub`: `reset --hard` to remote). `-y` skips collision and `-clear` prompts.
 - `notaura_ws_import_repos [docs|code|vendor|all|status]` — after `importer notaura_ws`. Tries the same GitHub SSH Host list as `importer`.
 
 Convention and layout: [scripts/bash_macros/README.md](scripts/bash_macros/README.md).
