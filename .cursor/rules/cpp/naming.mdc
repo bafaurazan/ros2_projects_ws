@@ -6,7 +6,7 @@ alwaysApply: false
 
 # C++ naming
 
-Build/setup → [../workspace.mdc](../workspace.mdc). Układ kodu → [structure.mdc](structure.mdc). Bash: [../bash/macros.mdc](../bash/macros.mdc). Python: [../python/naming.mdc](../python/naming.mdc).
+Układ kodu → [structure.mdc](structure.mdc). Python: [../python/naming.mdc](../python/naming.mdc). Bash: [../bash/naming.mdc](../bash/naming.mdc).
 
 Prefiks opisuje **typ zachowania**, nie jest ozdobą. Dotyczy **nowego kodu** — nie refaktoruj legacy bez prośby.
 
@@ -14,17 +14,17 @@ Prefiks opisuje **typ zachowania**, nie jest ozdobą. Dotyczy **nowego kodu** �
 
 | Prefiks | Zwraca | Sens | Dobry przykład | Zły przykład |
 |---------|--------|------|----------------|--------------|
-| `Is` | `bool` | „czy teraz X?” | `IsEmergencyStopStateConfirmed()` | `IsVelocity()` zwracające `int` |
-| `Has` | `bool` | „czy istnieje / jest dostępne?” | `HasActiveVelocityInterface()` | `HasVelocity` gdy chodzi o wartość, nie bool |
-| `Get` | wartość | odczyt bez zmiany stanu | `GetActualVelocityCh1()` | `GetAndSendVelocity()` — efekt uboczny |
-| `Set` | `void` lub `bool` | zapis / konfiguracja | `SetMotorsVelocity()` | `SetVelocity` gdy tylko odczytuje |
+| `Is` | `bool` | „czy teraz X?” | `IsReady()` | `IsVelocity()` zwracające `int` |
+| `Has` | `bool` | „czy istnieje / jest dostępne?” | `HasActiveSession()` | `HasVelocity` gdy chodzi o wartość, nie bool |
+| `Get` | wartość | odczyt bez zmiany stanu | `GetOutputValue()` | `GetAndSend()` — efekt uboczny |
+| `Set` | `void` lub `bool` | zapis / konfiguracja | `SetOutputValues()` | `SetVelocity` gdy tylko odczytuje |
 | `Try` | `bool` / `optional` | porażka = normalna ścieżka | `TryClearErrors()` | `TryStop` gdy zawsze się udaje |
 
 `Set` — **tylko metody**, nigdy pole klasy. `has_errors` = „istnieją błędy”; `IsInErrorState` = „jesteśmy w stanie błędu”. Opcjonalnie `Can` dla uprawnienia („czy wolno?”).
 
 Dodatkowe: `Wait`, `Check`, `On`, `Parse`, `Create`/`Make`, `Require`/`Ensure`.
 
-Bez prefiksu gdy nazwa to **akcja** lub **transformacja**: `StopMotors()`, `ActivateRelayModuleIO()`, `RpmToLinearVelocity`.
+Bez prefiksu gdy nazwa to **akcja** lub **transformacja**: `Stop()`, `Activate()`, `RpmToLinearVelocity`.
 
 ## Pola vs metody
 
@@ -32,33 +32,33 @@ Prefiksy `Is` / `Has` / `Get` / `Set` / `Try` idą na **metody**. Pola to **dane
 
 ```cpp
 // Pola bool — przymiotnik / imiesłów, bez is_/has_; trailing _
-std::atomic<bool> hv_active_{false};
-std::atomic<bool> hv_enable_requested_{false};
+std::atomic<bool> connection_active_{false};
+std::atomic<bool> enable_requested_{false};
 std::atomic<bool> command_loop_running_{false};
 
 // Metody
-bool IsHvActive() const { return hv_active_.load(); }
-bool SetMotorsVelocity(int32_t ch1, int32_t ch2);
+bool IsConnectionActive() const { return connection_active_.load(); }
+bool SetOutputValues(int32_t ch1, int32_t ch2);
 
 // Lokalne zmienne bool — is_/has_ OK
-const bool is_entering_software_estop = ...;
+const bool is_pending_activation = ...;
 ```
 
-Źle na polu: `is_48v_active_`, `set_48v_active_`. Dobrze: `hv_enable_requested_` (żądanie) vs `hv_active_` (stan).
+Źle na polu: `is_active_`, `set_active_`. Dobrze: `enable_requested_` (żądanie) vs `connection_active_` (stan).
 
-Legacy z `is_*_` na polach (np. `is_48v_active_`) — nie refaktoruj bez prośby; **nowe** pola bez `is_`.
+Legacy z `is_*_` na polach — nie refaktoruj bez prośby; **nowe** pola bez `is_`.
 
 ## Nazwa = rzeczywista rola
 
 - Nazwa opisuje **co to jest**, nie co „chciałeś osiągnąć”.
-  - Dobrze: `GetVelocityInterfaceName()`
-  - Źle: `WheelVelocityClaimName()` — to nie jest „claim”
-- **Ta sama terminologia** w całym pliku (`drivetrain`, nie `axle` jeśli reszta używa `drivetrains_`).
-- **Wzorzec istniejący w pliku** wygrywa: `PowerStageToString` → nowe enumy też `FooToString`, nie `HardwareStateName`.
+  - Dobrze: `GetInterfaceName()`
+  - Źle: `ClaimName()` — to nie jest „claim”
+- **Ta sama terminologia** w całym pliku (`account`, nie `user` jeśli reszta używa `accounts_`).
+- **Wzorzec istniejący w pliku** wygrywa: `ConnectionStateToString` → nowe enumy też `FooToString`, nie `HardwareStateName`.
 - Enum: krótkie wartości (`STOPPED`, `ACTIVE`, `INACTIVE`) zamiast złożonych (`SAFE_STOPPED`) gdy nie dodają informacji.
 - Nowy enum stanu: `enum class Foo` + `FooToString()` w tym samym `.hpp` — szczegóły w [structure.mdc](structure.mdc).
-- Bool o semantyce domeny: `motor_hw_engaged_`, nie ogólnik `drive_permitted` gdy chodzi o hardware.
+- Bool o semantyce domeny: `resource_locked_`, nie ogólnik `drive_permitted` gdy chodzi o lock.
 
 ## Wykluczenia
 
-Nie zmieniaj API zewnętrznych: `rclcpp::get_logger`, `get_command` / `set_state` (ros2_control), override’y (`GetFilter`), ROS lifecycle.
+Nie zmieniaj API zewnętrznych frameworków ani override’ów wymaganych przez bazę.

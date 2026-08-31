@@ -1,26 +1,14 @@
 ---
-description: "Bash: makra workspace, prefiksy, namespace bez duplikacji"
-globs: scripts/**/*.bash
+description: "Bash: bundle scripts/bash_macros, namespace bez duplikacji"
+globs: "{scripts/**/*.bash,**/scripts/bash_macros/**}"
 alwaysApply: false
 ---
 
 # Bash macros
 
-Build/setup → [../workspace.mdc](../workspace.mdc). C++: [../cpp/naming.mdc](../cpp/naming.mdc) + [../cpp/structure.mdc](../cpp/structure.mdc). Python: [../python/naming.mdc](../python/naming.mdc).
+Prefiksy → [naming.mdc](naming.mdc). Layout bundli: [../../../scripts/bash_macros/README.md](../../../scripts/bash_macros/README.md).
 
-Prefiks opisuje **typ zachowania**. Używaj go, gdy poprawia czytelność; inaczej zostaw czysty czasownik. Dotyczy **nowego kodu** — nie refaktoruj legacy bez prośby.
-
-## Prefiksy
-
-| Prefiks | Zwraca | Sens | Dobry przykład | Zły przykład |
-|---------|--------|------|----------------|--------------|
-| `is_` | bool (exit 0/1) | „czy teraz X?” | `is_wsl()`, `is_broken_local_cmake()` | `is_velocity` zwracające liczbę |
-| `has_` | bool | „czy istnieje / jest dostępne?” | `has_ros2_setup()`, `has_command()` | `has_path` gdy zwraca ścieżkę |
-| `get_` | wartość | odczyt bez zmiany stanu | `get_ros2_setup_path()`, `get_host_arch()` | `get_and_source` — ma efekt uboczny |
-| `set_` | — | zapis / konfiguracja | `set_workspace_root()`, `set_default_middleware()` | `set_path` gdy tylko odczytuje |
-| `try_` | bool | operacja, która może się nie udać | rzadko w bashu | `try_build` gdy `build` zawsze jest komendą |
-
-Prywatne helpery: `_is_foo`, `_has_foo` (np. `_has_src_dir`). Makra publiczne (`build`, `diag`, `load_macros`) — **bez** prefiksu.
+Dotyczy projektów z `scripts/bash_macros/` i `load_macros`. Publiczne makra (`build`, `diag`, `load_macros`) — **bez** prefiksu.
 
 ## Namespace — nie duplikuj nazwy bundla
 

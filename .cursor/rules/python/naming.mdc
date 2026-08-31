@@ -6,18 +6,18 @@ alwaysApply: false
 
 # Python naming
 
-Build/setup → [../workspace.mdc](../workspace.mdc). Semantyka prefiksów jak w [../cpp/naming.mdc](../cpp/naming.mdc) (ta sama logika, pisownia PEP 8). Bash: [../bash/macros.mdc](../bash/macros.mdc).
+Semantyka prefiksów jak w [../cpp/naming.mdc](../cpp/naming.mdc) (ta sama logika, pisownia PEP 8). Bash: [../bash/naming.mdc](../bash/naming.mdc).
 
 Prefiks opisuje **typ zachowania**. Dotyczy **nowego kodu**.
 
 | Prefiks | Sens | Przykład |
 |---------|------|----------|
 | `is_` | stan bool | `is_active`, `is_configured()` |
-| `has_` | istnienie / dostępność | `has_permission`, `has_overlay()` |
-| `get_` | odczyt bez zmiany stanu | `get_package_share_directory()` |
+| `has_` | istnienie / dostępność | `has_permission`, `has_config()` |
+| `get_` | odczyt bez zmiany stanu | `get_config_path()` |
 | `set_` | zapis / konfiguracja | `set_parameters()` |
 | `try_` | porażka = normalna ścieżka | `try_connect()` |
 
 Akcje i transformacje — **bez** prefiksu: `activate()`, `parse_config()`, `build()`. Pola: `self._foo_active` (bez `is_` na memberze, jak w C++).
 
-Nie zmieniaj API ROS (`rclpy`, launch) ani nazw wymuszonych przez framework.
+Nie zmieniaj API frameworka ani nazw wymuszonych przez bazę / plugin.

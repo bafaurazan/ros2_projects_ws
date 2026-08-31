@@ -15,7 +15,7 @@ Each repository keeps a `scripts/bash_macros/` bundle. The shell (`./scripts/set
 
 `<repo>` is the directory immediately above `scripts/` (root workspace or `src/<repo>/`).
 
-Function names must be unique across all repos. `load_macros` aborts on collisions. Names starting with `_` or containing `::` are not public macros.
+Function names must be unique across all repos. `load_macros` aborts on collisions. Names starting with `_` or containing `::` are not public macros. Prefix and namespace conventions: [`.cursor/rules/bash/naming.mdc`](../../.cursor/rules/bash/naming.mdc), [`.cursor/rules/bash/macros.mdc`](../../.cursor/rules/bash/macros.mdc).
 
 ### `launch/macros.bash` registry
 

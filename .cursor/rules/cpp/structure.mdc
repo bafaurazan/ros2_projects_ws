@@ -6,9 +6,9 @@ alwaysApply: false
 
 # C++ structure
 
-Build/setup → [../workspace.mdc](../workspace.mdc). Nazewnictwo → [naming.mdc](naming.mdc).
+Nazewnictwo → [naming.mdc](naming.mdc). Python: [../python/naming.mdc](../python/naming.mdc). Bash: [../bash/naming.mdc](../bash/naming.mdc).
 
-Konwencje z code review `husarz_hardware_interface` i driverów CAN. Dotyczy **nowego kodu** — nie refaktoruj legacy bez prośby.
+Konwencje dla kodu z logiką stanów i warstwą sprzętową. Dotyczy **nowego kodu** — nie refaktoruj legacy bez prośby.
 
 ## Header (.hpp) vs source (.cpp)
 
@@ -31,22 +31,22 @@ Unikaj anonimowego namespace w `.cpp` z helperami/stałymi, które mogą być po
 
 ## Metody zamiast monolitów
 
-Wyciągaj **prywatne metody** gdy `read()` / `write()` / `on_activate()` ma więcej niż jedną odpowiedzialność, albo ten sam warunek powtarza się wielokrotnie — **jeden gate wysoko**.
+Wyciągaj **prywatne metody** gdy główna pętla obsługi ma więcej niż jedną odpowiedzialność, albo ten sam warunek powtarza się wielokrotnie — **jeden gate wysoko**.
 
 ```cpp
-void write(...) {
-    const PowerStage current_power_stage = ...;  // snapshot na początku
-    if (!IsHighVoltageLive(current_power_stage)) { ...; return; }
-    if (drive_permitted) {
-        WriteMotorVelocityCommands();
-        WriteSteeringPositionCommands();
+void ProcessTick(...) {
+    const ConnectionState current_state = ...;  // snapshot na początku
+    if (!IsReady(current_state)) { ...; return; }
+    if (output_enabled) {
+        WritePrimaryCommands();
+        WriteSecondaryCommands();
     } else {
-        ZeroReleasedMotorVelocities();
+        ZeroReleasedOutputs();
     }
 }
 ```
 
-Gettery/settery w jednym bloku, bez logiki między nimi. Reużyj istniejące API modułu zanim napiszesz własną pętlę (np. `IsErrorCodeActive` z can_core).
+Gettery/settery w jednym bloku, bez logiki między nimi. Reużyj istniejące API modułu zanim napiszesz własną pętlę (np. `IsErrorActive()` z biblioteki bazowej).
 
 ## Zmienne — tylko gdy coś dają
 
@@ -54,60 +54,59 @@ Nie wprowadzaj zmiennej lokalnej użytej **dokładnie raz** — wstaw wyrażenie
 
 ```cpp
 // Źle — szum
-const auto name = "wheel_controller_" + storage.prefix;
-set_state<bool>(name + "/error", true);
+const auto name = "session_" + storage.prefix;
+set_flag(name + "/error", true);
 
 // Dobrze
-set_state<bool>("wheel_controller_" + storage.prefix + "/error", true);
+set_flag("session_" + storage.prefix + "/error", true);
 ```
 
-Wyjątki: **snapshot** używany wielokrotnie w tej samej funkcji (`current_power_stage`); złożone wyrażenie, gdzie nazwa pomaga; kopia pod mutexem przed zwolnieniem locka.
+Wyjątki: **snapshot** używany wielokrotnie w tej samej funkcji (`current_state`); złożone wyrażenie, gdzie nazwa pomaga; kopia pod mutexem przed zwolnieniem locka.
 
 ## Stany maszyny — `enum class`, nie zestaw flag
 
-Gdy obiekt przechodzi przez stany (lifecycle, power, activation), modeluj to jednym enumem — wzór: `PowerStage` + `PowerStageToString()`, `ActivationState` + `ActivationStateToString()`.
+Gdy obiekt przechodzi przez stany (lifecycle, connection, activation), modeluj to jednym enumem — wzór: `ConnectionState` + `ConnectionStateToString()`.
 
 ```cpp
-enum class PowerStage
+enum class ConnectionState
 {
-    NONE,
-    BOOT,                 // komentarz gdy stan nie jest oczywisty
-    LOW_VOLTAGE_ACTIVE,
-    HIGH_VOLTAGE_ACTIVE,
-    SW_E_STOP,
+    DISCONNECTED,
+    CONNECTING,  // komentarz gdy stan nie jest oczywisty
+    ACTIVE,
+    FAULT,
 };
 
-inline const char* PowerStageToString(PowerStage s)
+inline const char* ConnectionStateToString(ConnectionState s)
 {
     switch (s) {
-    case PowerStage::NONE: return "NONE";
+    case ConnectionState::DISCONNECTED: return "DISCONNECTED";
     // ...
     }
     return "UNKNOWN";
 }
 
-std::atomic<PowerStage> power_stage_{PowerStage::NONE};
+std::atomic<ConnectionState> connection_state_{ConnectionState::DISCONNECTED};
 ```
 
 - Jeden `enum class` na oś stanów; jedno pole — nie para booli jeśli da się scalić.
 - Wartości: `SCREAMING_SNAKE`, krótkie. `FooToString`: `inline const char*` obok enumu w `.hpp`.
-- Logika: `switch (stage)` / `if (stage == PowerStage::X)` zamiast `if (is_a && !is_b && is_c)`.
+- Logika: `switch (stage)` / `if (stage == ConnectionState::X)` zamiast `if (is_a && !is_b && is_c)`.
 
-Wyjątek: osobne bool tylko gdy opisują **niezależne** fakty (`hv_enable_requested_` vs `hv_active_`), nie kolejne kroki tej samej maszyny.
+Wyjątek: osobne bool tylko gdy opisują **niezależne** fakty (`enable_requested_` vs `connection_active_`), nie kolejne kroki tej samej maszyny.
 
 ## Czytelność
 
 - Pusta linia między blokami logicznymi i **przed** komentarzem.
-- Komentarze techniczne: precyzyjne (np. „output power / FET off”, nie ogólne „power off”).
+- Komentarze techniczne: precyzyjne (np. „output FET off”, nie ogólne „power off”).
 - TODO: jedna linia + numer issue. Przykład: `// TODO(#123): re-handshake after failed Activate`.
-- Logi: nie duplikuj — jeśli helper już loguje, nie dodawaj drugiego `RCLCPP_ERROR`.
+- Logi: nie duplikuj — jeśli helper już loguje, nie dodawaj drugiego wpisu do loggera frameworka.
 
 ## Współdzielony stan między wątkami
 
-- Snapshot na początku `read()`/`write()`: `const PowerStage current_power_stage = power_stage_.load()` pod mutexem.
+- Snapshot na początku głównej pętli obsługi: `const ConnectionState current_state = connection_state_.load()` pod mutexem.
 - Flagi współdzielone: `std::atomic` lub mutex + komentarz dlaczego.
 - Przy nowym wątku: rozważ mutex/CV i udokumentuj założenia kolejności — szczegóły w MR/issue.
 
 ## Wykluczenia
 
-Nie zmieniaj API ROS / override’ów bez potrzeby. Decyzje produktowe (partial activate, parametry URDF) — issue/MR, nie ta reguła.
+Nie zmieniaj API frameworka ani wirtualnych override’ów bez potrzeby. Decyzje produktowe — issue/MR, nie ta reguła.
