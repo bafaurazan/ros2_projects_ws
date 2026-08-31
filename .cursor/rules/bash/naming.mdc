@@ -1,23 +1,23 @@
 ---
-description: "Bash: prefiksy is_/has_/get_/set_/try_"
+description: "Bash: is_/has_/get_/set_/try_ prefixes"
 globs: "**/*.{bash,sh}"
 alwaysApply: false
 ---
 
 # Bash naming
 
-Prefiksy jak w [../cpp/naming.mdc](../cpp/naming.mdc) (ta sama logika, snake_case). Bundles `scripts/bash_macros/`: [macros.mdc](macros.mdc).
+Prefixes match [../cpp/naming.mdc](../cpp/naming.mdc) (same logic, snake_case). `scripts/bash_macros/` bundles: [macros.mdc](macros.mdc).
 
-Prefiks opisuje **typ zachowania**. Używaj go, gdy poprawia czytelność; inaczej zostaw czysty czasownik. Dotyczy **nowego kodu** — nie refaktoruj legacy bez prośby.
+A prefix describes **behavior type**. Use it when it improves readability; otherwise keep a plain verb. Applies to **new code** — do not refactor legacy unless asked.
 
-## Prefiksy
+## Prefixes
 
-| Prefiks | Zwraca | Sens | Dobry przykład | Zły przykład |
-|---------|--------|------|----------------|--------------|
-| `is_` | bool (exit 0/1) | „czy teraz X?” | `is_wsl()`, `is_broken_local_cmake()` | `is_velocity` zwracające liczbę |
-| `has_` | bool | „czy istnieje / jest dostępne?” | `has_config()`, `has_command()` | `has_path` gdy zwraca ścieżkę |
-| `get_` | wartość | odczyt bez zmiany stanu | `get_project_root()`, `get_host_arch()` | `get_and_source` — ma efekt uboczny |
-| `set_` | — | zapis / konfiguracja | `set_workspace_root()`, `set_default_middleware()` | `set_path` gdy tylko odczytuje |
-| `try_` | bool | operacja, która może się nie udać | rzadko w bashu | `try_build` gdy `build` zawsze jest komendą |
+| Prefix | Returns | Meaning | Good example | Bad example |
+|--------|---------|---------|--------------|-------------|
+| `is_` | bool (exit 0/1) | “is X true now?” | `is_wsl()`, `is_broken_local_cmake()` | `is_velocity` returning a number |
+| `has_` | bool | “does it exist / is it available?” | `has_config()`, `has_command()` | `has_path` when it returns a path |
+| `get_` | a value | read with no state change | `get_project_root()`, `get_host_arch()` | `get_and_source` — side effect |
+| `set_` | — | write / configure | `set_workspace_root()`, `set_default_middleware()` | `set_path` when it only reads |
+| `try_` | bool | operation that may fail | rare in bash | `try_build` when `build` is always the command |
 
-Prywatne helpery: `_is_foo`, `_has_foo` (np. `_has_src_dir`). Publiczne komendy (`build`, `diag`) — **bez** prefiksu.
+Private helpers: `_is_foo`, `_has_foo` (e.g. `_has_src_dir`). Public commands (`build`, `diag`) — **no** prefix.

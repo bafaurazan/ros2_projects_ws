@@ -1,23 +1,23 @@
 ---
-description: "Python: prefiksy is/has/get/set (PEP 8)"
+description: "Python: is/has/get/set prefixes (PEP 8)"
 globs: "**/*.py"
 alwaysApply: false
 ---
 
 # Python naming
 
-Semantyka prefiksów jak w [../cpp/naming.mdc](../cpp/naming.mdc) (ta sama logika, pisownia PEP 8). Bash: [../bash/naming.mdc](../bash/naming.mdc).
+Prefix semantics match [../cpp/naming.mdc](../cpp/naming.mdc) (same logic, PEP 8 spelling). Bash: [../bash/naming.mdc](../bash/naming.mdc).
 
-Prefiks opisuje **typ zachowania**. Dotyczy **nowego kodu**.
+A prefix describes **behavior type**. Applies to **new code**.
 
-| Prefiks | Sens | Przykład |
-|---------|------|----------|
-| `is_` | stan bool | `is_active`, `is_configured()` |
-| `has_` | istnienie / dostępność | `has_permission`, `has_config()` |
-| `get_` | odczyt bez zmiany stanu | `get_config_path()` |
-| `set_` | zapis / konfiguracja | `set_parameters()` |
-| `try_` | porażka = normalna ścieżka | `try_connect()` |
+| Prefix | Meaning | Example |
+|--------|---------|---------|
+| `is_` | bool state | `is_active`, `is_configured()` |
+| `has_` | existence / availability | `has_permission`, `has_config()` |
+| `get_` | read with no state change | `get_config_path()` |
+| `set_` | write / configure | `set_parameters()` |
+| `try_` | failure is a normal path | `try_connect()` |
 
-Akcje i transformacje — **bez** prefiksu: `activate()`, `parse_config()`, `build()`. Pola: `self._foo_active` (bez `is_` na memberze, jak w C++).
+Actions and transforms — **no** prefix: `activate()`, `parse_config()`, `build()`. Fields: `self._foo_active` (no `is_` on the member, same as C++).
 
-Nie zmieniaj API frameworka ani nazw wymuszonych przez bazę / plugin.
+Do not change framework APIs or names required by a base class / plugin.

@@ -1,64 +1,64 @@
 ---
-description: "C++: prefiksy Is/Get/Set, pola vs metody, enum ToString, terminologia"
+description: "C++: Is/Get/Set prefixes, fields vs methods, enum ToString, terminology"
 globs: "**/*.{hpp,cpp,h}"
 alwaysApply: false
 ---
 
 # C++ naming
 
-Układ kodu → [structure.mdc](structure.mdc). Python: [../python/naming.mdc](../python/naming.mdc). Bash: [../bash/naming.mdc](../bash/naming.mdc).
+Layout → [structure.mdc](structure.mdc). Python: [../python/naming.mdc](../python/naming.mdc). Bash: [../bash/naming.mdc](../bash/naming.mdc).
 
-Prefiks opisuje **typ zachowania**, nie jest ozdobą. Dotyczy **nowego kodu** — nie refaktoruj legacy bez prośby.
+A prefix describes **behavior type**, not decoration. Applies to **new code** — do not refactor legacy unless asked.
 
-## Prefiksy (metody)
+## Prefixes (methods)
 
-| Prefiks | Zwraca | Sens | Dobry przykład | Zły przykład |
-|---------|--------|------|----------------|--------------|
-| `Is` | `bool` | „czy teraz X?” | `IsReady()` | `IsVelocity()` zwracające `int` |
-| `Has` | `bool` | „czy istnieje / jest dostępne?” | `HasActiveSession()` | `HasVelocity` gdy chodzi o wartość, nie bool |
-| `Get` | wartość | odczyt bez zmiany stanu | `GetOutputValue()` | `GetAndSend()` — efekt uboczny |
-| `Set` | `void` lub `bool` | zapis / konfiguracja | `SetOutputValues()` | `SetVelocity` gdy tylko odczytuje |
-| `Try` | `bool` / `optional` | porażka = normalna ścieżka | `TryClearErrors()` | `TryStop` gdy zawsze się udaje |
+| Prefix | Returns | Meaning | Good example | Bad example |
+|--------|---------|---------|--------------|-------------|
+| `Is` | `bool` | “is X true now?” | `IsReady()` | `IsVelocity()` returning `int` |
+| `Has` | `bool` | “does it exist / is it available?” | `HasActiveSession()` | `HasVelocity` when the value is not a bool |
+| `Get` | a value | read with no state change | `GetOutputValue()` | `GetAndSend()` — side effect |
+| `Set` | `void` or `bool` | write / configure | `SetOutputValues()` | `SetVelocity` when it only reads |
+| `Try` | `bool` / `optional` | failure is a normal path | `TryClearErrors()` | `TryStop` when it always succeeds |
 
-`Set` — **tylko metody**, nigdy pole klasy. `has_errors` = „istnieją błędy”; `IsInErrorState` = „jesteśmy w stanie błędu”. Opcjonalnie `Can` dla uprawnienia („czy wolno?”).
+`Set` — **methods only**, never a class field. `has_errors` = “errors exist”; `IsInErrorState` = “we are in an error state”. Optional `Can` for permission (“is this allowed?”).
 
-Dodatkowe: `Wait`, `Check`, `On`, `Parse`, `Create`/`Make`, `Require`/`Ensure`.
+Also: `Wait`, `Check`, `On`, `Parse`, `Create`/`Make`, `Require`/`Ensure`.
 
-Bez prefiksu gdy nazwa to **akcja** lub **transformacja**: `Stop()`, `Activate()`, `RpmToLinearVelocity`.
+No prefix when the name is an **action** or a **transform**: `Stop()`, `Activate()`, `RpmToLinearVelocity`.
 
-## Pola vs metody
+## Fields vs methods
 
-Prefiksy `Is` / `Has` / `Get` / `Set` / `Try` idą na **metody**. Pola to **dane**:
+Prefixes `Is` / `Has` / `Get` / `Set` / `Try` go on **methods**. Fields are **data**:
 
 ```cpp
-// Pola bool — przymiotnik / imiesłów, bez is_/has_; trailing _
+// Bool fields — adjective / participle, no is_/has_; trailing _
 std::atomic<bool> connection_active_{false};
 std::atomic<bool> enable_requested_{false};
 std::atomic<bool> command_loop_running_{false};
 
-// Metody
+// Methods
 bool IsConnectionActive() const { return connection_active_.load(); }
 bool SetOutputValues(int32_t ch1, int32_t ch2);
 
-// Lokalne zmienne bool — is_/has_ OK
+// Local bools — is_/has_ OK
 const bool is_pending_activation = ...;
 ```
 
-Źle na polu: `is_active_`, `set_active_`. Dobrze: `enable_requested_` (żądanie) vs `connection_active_` (stan).
+Bad on a field: `is_active_`, `set_active_`. Good: `enable_requested_` (request) vs `connection_active_` (state).
 
-Legacy z `is_*_` na polach — nie refaktoruj bez prośby; **nowe** pola bez `is_`.
+Legacy `is_*_` fields — do not refactor unless asked; **new** fields without `is_`.
 
-## Nazwa = rzeczywista rola
+## Name = actual role
 
-- Nazwa opisuje **co to jest**, nie co „chciałeś osiągnąć”.
-  - Dobrze: `GetInterfaceName()`
-  - Źle: `ClaimName()` — to nie jest „claim”
-- **Ta sama terminologia** w całym pliku (`account`, nie `user` jeśli reszta używa `accounts_`).
-- **Wzorzec istniejący w pliku** wygrywa: `ConnectionStateToString` → nowe enumy też `FooToString`, nie `HardwareStateName`.
-- Enum: krótkie wartości (`STOPPED`, `ACTIVE`, `INACTIVE`) zamiast złożonych (`SAFE_STOPPED`) gdy nie dodają informacji.
-- Nowy enum stanu: `enum class Foo` + `FooToString()` w tym samym `.hpp` — szczegóły w [structure.mdc](structure.mdc).
-- Bool o semantyce domeny: `resource_locked_`, nie ogólnik `drive_permitted` gdy chodzi o lock.
+- The name describes **what it is**, not what you “meant to achieve”.
+  - Good: `GetInterfaceName()`
+  - Bad: `ClaimName()` — this is not a “claim”
+- **Same terminology** throughout the file (`account`, not `user` if the rest uses `accounts_`).
+- **Existing pattern in the file** wins: `ConnectionStateToString` → new enums also `FooToString`, not `HardwareStateName`.
+- Enum: short values (`STOPPED`, `ACTIVE`, `INACTIVE`) instead of compound ones (`SAFE_STOPPED`) when they add no information.
+- New state enum: `enum class Foo` + `FooToString()` in the same `.hpp` — details in [structure.mdc](structure.mdc).
+- Domain-bool: `resource_locked_`, not a vague `drive_permitted` when it is a lock.
 
-## Wykluczenia
+## Exclusions
 
-Nie zmieniaj API zewnętrznych frameworków ani override’ów wymaganych przez bazę.
+Do not change external framework APIs or overrides required by a base class.
