@@ -35,6 +35,6 @@ Convention and layout: [scripts/bash_macros/README.md](scripts/bash_macros/READM
 - `scripts/` — `bash_bringup`, `bash_container`, `bash_macros` (CLI: `setup.bash`)
 - `src/` — cloned subprojects (each may have its own `scripts/bash_macros/`, `.cursor/`, `AGENTS.md`)
 - `./build_ws/` — colcon artifacts in the project you build; not a macro cache
-- `.cursor/` — workspace rules and skills (git); subrepos may add their own
+- `.cursor/` — workspace rules and skills (git); subrepos may add their own. Style: `.cursor/rules/bash/macros.mdc`, `cpp/naming.mdc`, `cpp/structure.mdc`, `python/naming.mdc`.
 
 Do not edit `.distrobox_*` homes. Nested `AGENTS.md` / `.cursor/` under `src/<repo>/` apply when working in that subtree.

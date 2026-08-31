@@ -1,0 +1,113 @@
+---
+description: "C++: header vs cpp, stałe, metody, enum class stanów, czytelność"
+globs: "**/*.{hpp,cpp,h}"
+alwaysApply: false
+---
+
+# C++ structure
+
+Build/setup → [../workspace.mdc](../workspace.mdc). Nazewnictwo → [naming.mdc](naming.mdc).
+
+Konwencje z code review `husarz_hardware_interface` i driverów CAN. Dotyczy **nowego kodu** — nie refaktoruj legacy bez prośby.
+
+## Header (.hpp) vs source (.cpp)
+
+| Co | Gdzie |
+|----|-------|
+| Deklaracje metod, stałe współdzielone, małe helpery | `.hpp` (lub `*_helpers.hpp`) |
+| `#include` wymagany przez deklaracje w headerze | `.hpp`, nie tylko `.cpp` |
+| Structy-dane używane przez klasę | poza klasą, w tym samym `.hpp` |
+| Implementacja metod | `.cpp` |
+| Stałe **tylko dla tego translation unit** | `static constexpr` w `.cpp` |
+
+Unikaj anonimowego namespace w `.cpp` z helperami/stałymi, które mogą być potrzebne w innym pliku — to chowanie API.
+
+## Stałe
+
+- Format: `k_snake_case` (np. `k_mode_confirmation_timeout_ms`).
+- Współdzielone → `inline constexpr` lub `static constexpr` w `.hpp`.
+- Prywatne dla jednego `.cpp` → `static constexpr` na górze pliku.
+- Preferuj `static constexpr` nad `#define`.
+
+## Metody zamiast monolitów
+
+Wyciągaj **prywatne metody** gdy `read()` / `write()` / `on_activate()` ma więcej niż jedną odpowiedzialność, albo ten sam warunek powtarza się wielokrotnie — **jeden gate wysoko**.
+
+```cpp
+void write(...) {
+    const PowerStage current_power_stage = ...;  // snapshot na początku
+    if (!IsHighVoltageLive(current_power_stage)) { ...; return; }
+    if (drive_permitted) {
+        WriteMotorVelocityCommands();
+        WriteSteeringPositionCommands();
+    } else {
+        ZeroReleasedMotorVelocities();
+    }
+}
+```
+
+Gettery/settery w jednym bloku, bez logiki między nimi. Reużyj istniejące API modułu zanim napiszesz własną pętlę (np. `IsErrorCodeActive` z can_core).
+
+## Zmienne — tylko gdy coś dają
+
+Nie wprowadzaj zmiennej lokalnej użytej **dokładnie raz** — wstaw wyrażenie inline.
+
+```cpp
+// Źle — szum
+const auto name = "wheel_controller_" + storage.prefix;
+set_state<bool>(name + "/error", true);
+
+// Dobrze
+set_state<bool>("wheel_controller_" + storage.prefix + "/error", true);
+```
+
+Wyjątki: **snapshot** używany wielokrotnie w tej samej funkcji (`current_power_stage`); złożone wyrażenie, gdzie nazwa pomaga; kopia pod mutexem przed zwolnieniem locka.
+
+## Stany maszyny — `enum class`, nie zestaw flag
+
+Gdy obiekt przechodzi przez stany (lifecycle, power, activation), modeluj to jednym enumem — wzór: `PowerStage` + `PowerStageToString()`, `ActivationState` + `ActivationStateToString()`.
+
+```cpp
+enum class PowerStage
+{
+    NONE,
+    BOOT,                 // komentarz gdy stan nie jest oczywisty
+    LOW_VOLTAGE_ACTIVE,
+    HIGH_VOLTAGE_ACTIVE,
+    SW_E_STOP,
+};
+
+inline const char* PowerStageToString(PowerStage s)
+{
+    switch (s) {
+    case PowerStage::NONE: return "NONE";
+    // ...
+    }
+    return "UNKNOWN";
+}
+
+std::atomic<PowerStage> power_stage_{PowerStage::NONE};
+```
+
+- Jeden `enum class` na oś stanów; jedno pole — nie para booli jeśli da się scalić.
+- Wartości: `SCREAMING_SNAKE`, krótkie. `FooToString`: `inline const char*` obok enumu w `.hpp`.
+- Logika: `switch (stage)` / `if (stage == PowerStage::X)` zamiast `if (is_a && !is_b && is_c)`.
+
+Wyjątek: osobne bool tylko gdy opisują **niezależne** fakty (`hv_enable_requested_` vs `hv_active_`), nie kolejne kroki tej samej maszyny.
+
+## Czytelność
+
+- Pusta linia między blokami logicznymi i **przed** komentarzem.
+- Komentarze techniczne: precyzyjne (np. „output power / FET off”, nie ogólne „power off”).
+- TODO: jedna linia + numer issue. Przykład: `// TODO(#123): re-handshake after failed Activate`.
+- Logi: nie duplikuj — jeśli helper już loguje, nie dodawaj drugiego `RCLCPP_ERROR`.
+
+## Współdzielony stan między wątkami
+
+- Snapshot na początku `read()`/`write()`: `const PowerStage current_power_stage = power_stage_.load()` pod mutexem.
+- Flagi współdzielone: `std::atomic` lub mutex + komentarz dlaczego.
+- Przy nowym wątku: rozważ mutex/CV i udokumentuj założenia kolejności — szczegóły w MR/issue.
+
+## Wykluczenia
+
+Nie zmieniaj API ROS / override’ów bez potrzeby. Decyzje produktowe (partial activate, parametry URDF) — issue/MR, nie ta reguła.

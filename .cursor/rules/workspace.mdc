@@ -1,5 +1,5 @@
 ---
-description: Workspace conventions for ros2_projects_ws (setup, macros, artifacts)
+description: "Workspace: setup, build/cbuild, paczki ROS 2 vs CMake"
 alwaysApply: true
 ---
 
@@ -11,3 +11,20 @@ alwaysApply: true
 - Do not modify `.distrobox_*` container homes or generated colcon trees unless the user asks.
 - Each repo may keep `scripts/bash_macros/` (sourced in place, not copied). Function names must be unique workspace-wide. Do not copy `bash_macros/src/load_macros.bash` into a subrepo.
 - Subprojects under `src/` may have their own `.cursor/` and `AGENTS.md`; those apply in that subtree. Do not copy them into the workspace root.
+
+Style rules (per language): [bash/macros.mdc](bash/macros.mdc), [cpp/naming.mdc](cpp/naming.mdc), [cpp/structure.mdc](cpp/structure.mdc), [python/naming.mdc](python/naming.mdc).
+
+## Build (`build` / `cbuild`)
+
+- `build` / `cbuild` run **colcon** on `./src` in the current directory — they build only **ROS 2 packages** (directories with `package.xml` that colcon discovers).
+- List packages: `colcon list` (in the directory that contains `./src`) or `diag`.
+- `--packages-select` — only names from `colcon list`. Do not guess names from CMake subfolders.
+
+### CMake subprojects (not colcon)
+
+Directories such as `drivers/can_driver_core/`, `motor_raw_can_driver/` under `husarz_hardware_interface` are **CMake** dependencies (`fetch_driver` / `FetchContent`), not separate ROS 2 packages.
+
+- Correct: `cbuild --packages-select husarz_hardware_interface` — builds HI **and** `can_driver_core` via the parent's CMake.
+- Wrong: `cbuild --packages-select can_driver_core` — colcon does not know that package.
+
+The same applies to other drivers listed in `husarz_hardware_interface/CMakeLists.txt` (motor, brake, steering, …).

@@ -1,0 +1,41 @@
+---
+description: "Bash: makra workspace, prefiksy, namespace bez duplikacji"
+globs: scripts/**/*.bash
+alwaysApply: false
+---
+
+# Bash macros
+
+Build/setup → [../workspace.mdc](../workspace.mdc). C++: [../cpp/naming.mdc](../cpp/naming.mdc) + [../cpp/structure.mdc](../cpp/structure.mdc). Python: [../python/naming.mdc](../python/naming.mdc).
+
+Prefiks opisuje **typ zachowania**. Używaj go, gdy poprawia czytelność; inaczej zostaw czysty czasownik. Dotyczy **nowego kodu** — nie refaktoruj legacy bez prośby.
+
+## Prefiksy
+
+| Prefiks | Zwraca | Sens | Dobry przykład | Zły przykład |
+|---------|--------|------|----------------|--------------|
+| `is_` | bool (exit 0/1) | „czy teraz X?” | `is_wsl()`, `is_broken_local_cmake()` | `is_velocity` zwracające liczbę |
+| `has_` | bool | „czy istnieje / jest dostępne?” | `has_ros2_setup()`, `has_command()` | `has_path` gdy zwraca ścieżkę |
+| `get_` | wartość | odczyt bez zmiany stanu | `get_ros2_setup_path()`, `get_host_arch()` | `get_and_source` — ma efekt uboczny |
+| `set_` | — | zapis / konfiguracja | `set_workspace_root()`, `set_default_middleware()` | `set_path` gdy tylko odczytuje |
+| `try_` | bool | operacja, która może się nie udać | rzadko w bashu | `try_build` gdy `build` zawsze jest komendą |
+
+Prywatne helpery: `_is_foo`, `_has_foo` (np. `_has_src_dir`). Makra publiczne (`build`, `diag`, `load_macros`) — **bez** prefiksu.
+
+## Namespace — nie duplikuj nazwy bundla
+
+`_macros_bind_namespace` robi `namespace::nazwa` z funkcji `nazwa`. Jeśli helper nazywa się `_diag_search`, API to `diag::_diag_search`.
+
+```bash
+# Źle — podwójny prefiks
+_diag_search_something() { ... }
+_macros_bind_namespace diag _diag_search_something
+# → diag::_diag_search_something
+
+# Dobrze — namespace daje kontekst
+_search_something() { ... }
+_macros_bind_namespace diag _search_something
+# → diag::_search_something
+```
+
+Nazwa funkcji **nie** powinna zawierać nazwy bundla (`diag`, `build`, `load`, `tr`, …) — namespace już ją dodaje w publicznym API.
