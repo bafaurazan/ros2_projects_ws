@@ -8,7 +8,7 @@ alwaysApply: false
 
 Prefixes → [naming.mdc](naming.mdc). Bundle layout: [../../../scripts/bash_macros/README.md](../../../scripts/bash_macros/README.md).
 
-Applies to projects with `scripts/bash_macros/` and `load_macros`. Public macros (`build`, `diag`, `load_macros`) — **no** prefix.
+Applies to projects with `scripts/bash_macros/` and `load_macros`. Public macros (`build`, `cbuild`, `diag`, `load_macros`, `importer`) — **no** prefix.
 
 ## Namespace — do not duplicate the bundle name
 

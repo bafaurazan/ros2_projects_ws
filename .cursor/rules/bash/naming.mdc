@@ -20,4 +20,4 @@ A prefix describes **behavior type**. Use it when it improves readability; other
 | `set_` | — | write / configure | `set_workspace_root()`, `set_default_middleware()` | `set_path` when it only reads |
 | `try_` | bool | operation that may fail | rare in bash | `try_build` when `build` is always the command |
 
-Private helpers: `_is_foo`, `_has_foo` (e.g. `_has_src_dir`). Public commands (`build`, `diag`) — **no** prefix.
+Private helpers: `_is_foo`, `_has_foo` (e.g. `_has_src_dir`). Public commands (`build`, `cbuild`, `diag`, `load_macros`, `importer`) — **no** prefix.
