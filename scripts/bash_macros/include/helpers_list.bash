@@ -16,7 +16,7 @@ source "${_helpers_dir}/load_helpers.bash"
 # shellcheck disable=SC1091
 source "${_helpers_dir}/importer_helpers.bash"
 
-_macros_bind_namespace() {
+_bind_namespace() {
     local namespace="$1"
     shift
     local short
@@ -26,24 +26,24 @@ _macros_bind_namespace() {
     done
 }
 
-_macros_bind_namespace diag \
+_bind_namespace diag \
     _has_command \
     _print_system \
     _print_tool \
     _print_tools \
     _print_environment \
-    _print_importer_github_hosts \
+    _print_github_hosts \
     _get_expected_cyclone_uri \
     _has_cyclone_xml \
     _is_env_loaded \
     _print_checks \
-    _get_term_width \
+    _get_terminal_width \
     _wrap_text \
     _parse_macro_registry \
     _print_macro_block \
     _print_macros
 
-_macros_bind_namespace build \
+_bind_namespace build \
     _require_ros_toolchain \
     _has_src_dir \
     _get_ros_distro \
@@ -56,7 +56,7 @@ _macros_bind_namespace build \
     _install_pip_requirements \
     _source_install_overlay
 
-_macros_bind_namespace load \
+_bind_namespace load \
     _get_repo_from_path \
     _has_workspace_root \
     _find_sources \
@@ -66,13 +66,13 @@ _macros_bind_namespace load \
     _source_bundle_macros \
     _source_direct_files
 
-_macros_bind_namespace importer \
-    _get_importer_repo_path \
-    _get_importer_github_hosts \
-    _get_importer_branch \
-    _get_importer_dir \
-    _list_importer_targets \
-    _ensure_importer_repo
+_bind_namespace importer \
+    _get_repo_path \
+    _get_github_hosts \
+    _get_branch \
+    _get_clone_dir \
+    _list_targets \
+    _ensure_repo
 
-unset -f _macros_bind_namespace
+unset -f _bind_namespace
 unset _helpers_dir

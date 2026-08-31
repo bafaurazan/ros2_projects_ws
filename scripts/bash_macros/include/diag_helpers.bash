@@ -46,11 +46,11 @@ _print_environment() {
     echo "RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-<unset>}"
     echo "CYCLONEDDS_URI=${CYCLONEDDS_URI:-<unset>}"
     echo "_ENV_LOADED=${_ENV_LOADED:-<unset>}"
-    _print_importer_github_hosts
+    _print_github_hosts
     echo
 }
 
-_print_importer_github_hosts() {
+_print_github_hosts() {
     local hosts_csv="" host
     while IFS= read -r host; do
         [[ -n "$host" ]] || continue
@@ -59,7 +59,7 @@ _print_importer_github_hosts() {
         else
             hosts_csv="$host"
         fi
-    done < <(importer::_get_importer_github_hosts)
+    done < <(importer::_get_github_hosts)
 
     if [[ -f "${HOME}/.ssh/config" ]]; then
         echo "importer github hosts: ${hosts_csv} (from ~/.ssh/config)"
@@ -135,26 +135,26 @@ _print_checks() {
     [[ "$ok" == true ]]
 }
 
-_get_term_width() {
-    local w="${COLUMNS:-}"
-    if [[ -z "$w" ]] && command -v tput >/dev/null 2>&1; then
-        w="$(tput cols 2>/dev/null || true)"
+_get_terminal_width() {
+    local width="${COLUMNS:-}"
+    if [[ -z "$width" ]] && command -v tput >/dev/null 2>&1; then
+        width="$(tput cols 2>/dev/null || true)"
     fi
-    [[ "$w" =~ ^[0-9]+$ ]] || w=72
-    if (( w > 72 )); then
-        w=72
+    [[ "$width" =~ ^[0-9]+$ ]] || width=72
+    if (( width > 72 )); then
+        width=72
     fi
-    if (( w < 40 )); then
-        w=40
+    if (( width < 40 )); then
+        width=40
     fi
-    printf '%s\n' "$w"
+    printf '%s\n' "$width"
 }
 
 _wrap_text() {
     local text="$1"
     local indent="$2"
     local width prefix
-    width="$(_get_term_width)"
+    width="$(_get_terminal_width)"
     width=$((width - indent))
     if (( width < 20 )); then
         width=20

@@ -26,8 +26,9 @@ Workspace entry and three ROS-like bash packages. CLI is always:
 ```text
 setup.bash                              # source-aware wrapper → bash_bringup
 bash_bringup/
-  launch/bringup.bash                   # CLI router
-  src/macros_session.bash               # host macros session
+  launch/bringup.bash                   # wrapper → include + src
+  src/                                  # dispatch, macros_session
+  include/                              # bringup + session helpers
 bash_container/
   launch/runtime_dispatch.bash          # Distrobox vs Docker
   src/container_session.bash            # in-container bootstrap (bashrc hook)

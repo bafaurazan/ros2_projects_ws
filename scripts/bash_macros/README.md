@@ -11,6 +11,7 @@ Each repository keeps a `scripts/bash_macros/` bundle. The shell (`./scripts/set
   src/                   # function implementations
     my_macro.bash
   include/               # optional private helpers (_foo, ns::_foo)
+  config/                # optional data (e.g. importer.repos)
 ```
 
 `<repo>` is the directory immediately above `scripts/` (root workspace or `src/<repo>/`).
@@ -33,7 +34,7 @@ Do not copy root `src/load_macros.bash` into a subrepo. Root `launch/macros.bash
 ### Helpers + namespace (optional)
 
 1. Short `_foo` helpers in `include/<api>_helpers.bash`
-2. Root bundle: register them in `include/helpers_list.bash` as `ns::_foo`
+2. Root bundle: register them with `_bind_namespace` in `include/helpers_list.bash` as `ns::_foo`
 3. In `src/*.bash`, call `ns::_…` from the public function
 
 TAB completion hides `*::*` and `_foo` on the first shell word only; git and other subcommand completion are untouched. The functions stay in the shell.
@@ -44,7 +45,7 @@ TAB completion hides `*::*` and `_foo` on the first shell word only; git and oth
 - `cbuild [colcon args...]` — `colcon build` into `./build_ws/`, then source the install overlay (skipped if colcon fails).
 - `diag` — environment checks and the public macro list (from launch registries).
 - `load_macros` — rediscover `scripts/bash_macros/` bundles and re-source `launch/macros.bash`.
-- `importer transporter|notaura_ws` — clone a registered subrepo (`develop`) on first use; no-op if already present. Tries `github.com`, then any `Host` aliases in `~/.ssh/config` whose `HostName` is `github.com` (falls back to `github.com` if that file is missing).
+- `importer <name>` — clone a target from `config/importer.repos` on first use; no-op if already present. Tries `github.com`, then any `Host` aliases in `~/.ssh/config` whose `HostName` is `github.com` (falls back to `github.com` if that file is missing).
 - `notaura_ws_import_repos` (after `importer notaura_ws`) uses that same host list when cloning from `.repos` files.
 
 Entry: `scripts/bash_macros/launch/macros.bash` (used by `bash_bringup/src/macros_session.bash` and `bash_container/src/container_session.bash`).

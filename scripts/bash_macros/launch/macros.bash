@@ -12,9 +12,10 @@
 # macro load_macros
 #   Rediscover scripts/bash_macros/ bundles and re-source launch/macros.bash.
 # macro importer
-#   Clone a registered subrepo (develop) on first use; no-op if
-#   already present. Tries github.com then SSH aliases for github.com
-#   from ~/.ssh/config. Usage: importer transporter|notaura_ws
+#   Clone a registered subrepo on first use; no-op if already
+#   present. Targets live in scripts/bash_macros/config/importer.repos.
+#   Tries github.com then SSH aliases for github.com from ~/.ssh/config.
+#   Usage: importer <name>
 # @macros-end
 
 _bundle_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

@@ -12,17 +12,17 @@ Applies to projects with `scripts/bash_macros/` and `load_macros`. Public macros
 
 ## Namespace — do not duplicate the bundle name
 
-`_macros_bind_namespace` turns function `name` into `namespace::name`. If the helper is `_diag_search`, the API is `diag::_diag_search`.
+`_bind_namespace` turns function `name` into `namespace::name`. If the helper is `_diag_search`, the API is `diag::_diag_search`.
 
 ```bash
 # Bad — double prefix
 _diag_search_something() { ... }
-_macros_bind_namespace diag _diag_search_something
+_bind_namespace diag _diag_search_something
 # → diag::_diag_search_something
 
 # Good — the namespace already provides context
 _search_something() { ... }
-_macros_bind_namespace diag _search_something
+_bind_namespace diag _search_something
 # → diag::_search_something
 ```
 

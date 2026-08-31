@@ -43,7 +43,7 @@ _env_load() {
 
     # shellcheck disable=SC1091
     source "${ROS2_PROJECTS_WS_ROOT}/scripts/bash_macros/include/completion.bash"
-    _macros_install_completion_filter
+    _install_completion_filter
 }
 
 _env_load

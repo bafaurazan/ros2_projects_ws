@@ -20,4 +20,6 @@ A prefix describes **behavior type**. Applies to **new code**.
 
 Actions and transforms — **no** prefix: `activate()`, `parse_config()`, `build()`. Fields: `self._foo_active` (no `is_` on the member, same as C++).
 
+Keep names short, but spell out words a reader would have to expand (`get_terminal_width`, not `get_term_width`). Established acronyms are fine.
+
 Do not change framework APIs or names required by a base class / plugin.

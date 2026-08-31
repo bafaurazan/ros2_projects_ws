@@ -2,15 +2,47 @@
 
 # Private helpers for importer (short names). Bound to importer::_* via helpers_list.bash.
 
-_get_importer_repo_path() {
-    case "$1" in
-        transporter) printf '%s\n' "bafaurazan/transporter" ;;
-        notaura_ws) printf '%s\n' "TheNotAura/notaura_ws" ;;
-        *) return 1 ;;
-    esac
+_get_config_path() {
+    local bundle_dir
+    bundle_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    printf '%s\n' "${bundle_dir}/config/importer.repos"
 }
 
-_get_importer_github_hosts() {
+# Fields: 1=name 2=github_path 3=branch 4=dest (optional)
+_get_target_field() {
+    local target="$1"
+    local field="$2"
+    local file
+    file="$(_get_config_path)"
+    [[ -f "$file" ]] || return 1
+    awk -v t="$target" -v f="$field" '
+        {
+            sub(/\r$/, "")
+            if ($0 ~ /^[[:space:]]*#/ || NF < 3) next
+            if ($1 == t) { print $f; found = 1; exit }
+        }
+        END { exit !found }
+    ' "$file"
+}
+
+_list_config_targets() {
+    local file
+    file="$(_get_config_path)"
+    [[ -f "$file" ]] || return 0
+    awk '
+        {
+            sub(/\r$/, "")
+            if ($0 ~ /^[[:space:]]*#/ || NF < 3) next
+            print $1
+        }
+    ' "$file"
+}
+
+_get_repo_path() {
+    _get_target_field "$1" 2
+}
+
+_get_github_hosts() {
     local -a hosts=("github.com")
     local ssh_config="${HOME}/.ssh/config"
 
@@ -33,26 +65,38 @@ _get_importer_github_hosts() {
     printf '%s\n' "${hosts[@]}" | awk '!seen[$0]++'
 }
 
-_get_importer_branch() {
-    case "$1" in
-        transporter|notaura_ws) printf '%s\n' "develop" ;;
-        *) return 1 ;;
-    esac
+_get_branch() {
+    _get_target_field "$1" 3
 }
 
-_get_importer_dir() {
+_get_clone_dir() {
     local target="$1"
-    printf '%s\n' "${ROS2_PROJECTS_WS_ROOT:?ROS2_PROJECTS_WS_ROOT is not set}/src/${target}"
+    local dest
+    dest="$(_get_target_field "$target" 4)"
+    if [[ -z "$dest" ]]; then
+        dest="src/${target}"
+    fi
+    printf '%s\n' "${ROS2_PROJECTS_WS_ROOT:?ROS2_PROJECTS_WS_ROOT is not set}/${dest}"
 }
 
-_list_importer_targets() {
+_list_targets() {
+    local file target dest
+    file="$(_get_config_path)"
     echo "Usage: importer <target>"
-    echo "Targets:"
-    echo "  transporter    ${ROS2_PROJECTS_WS_ROOT:-<workspace>}/src/transporter"
-    echo "  notaura_ws     ${ROS2_PROJECTS_WS_ROOT:-<workspace>}/src/notaura_ws"
+    echo "Targets (from ${file}):"
+    if [[ ! -f "$file" ]]; then
+        echo "  (config file missing)"
+        return 0
+    fi
+    while IFS= read -r target; do
+        [[ -n "$target" ]] || continue
+        dest="$(_get_target_field "$target" 4)"
+        [[ -n "$dest" ]] || dest="src/${target}"
+        echo "  ${target}    ${ROS2_PROJECTS_WS_ROOT:-<workspace>}/${dest}"
+    done < <(_list_config_targets)
 }
 
-_ensure_importer_repo() {
+_ensure_repo() {
     local target="$1"
     local repo_path branch dest host url tried=""
 
@@ -61,13 +105,13 @@ _ensure_importer_repo() {
         return 1
     fi
 
-    repo_path="$(_get_importer_repo_path "$target")" || {
+    repo_path="$(_get_repo_path "$target")" || {
         echo "importer: unknown target '$target'" >&2
-        _list_importer_targets >&2
+        _list_targets >&2
         return 1
     }
-    branch="$(_get_importer_branch "$target")" || return 1
-    dest="$(_get_importer_dir "$target")"
+    branch="$(_get_branch "$target")" || return 1
+    dest="$(_get_clone_dir "$target")"
 
     mkdir -p "$(dirname "$dest")" || return 1
 
@@ -101,7 +145,7 @@ _ensure_importer_repo() {
         if [[ -e "$dest" ]]; then
             rm -rf "$dest"
         fi
-    done < <(_get_importer_github_hosts)
+    done < <(_get_github_hosts)
 
     echo "importer: failed to clone ${target} via: ${tried:-<none>}" >&2
     return 1

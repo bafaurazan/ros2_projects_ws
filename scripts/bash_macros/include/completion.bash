@@ -4,7 +4,7 @@
 # for the first word on the line only. Does not override git or other subcommand
 # completion (no complete -D). Sourced after load_macros.
 
-_macros_completion_filter() {
+_filter_completion() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local cand
     COMPREPLY=()
@@ -20,6 +20,6 @@ _macros_completion_filter() {
     done < <(compgen -c -- "$cur")
 }
 
-_macros_install_completion_filter() {
-    complete -I -F _macros_completion_filter 2>/dev/null || true
+_install_completion_filter() {
+    complete -I -F _filter_completion 2>/dev/null || true
 }

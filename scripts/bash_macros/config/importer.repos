@@ -1,0 +1,10 @@
+# Importer targets. One repo per line:
+#   <name>  <owner/repo>  <branch>  [dest]
+# dest is relative to the workspace root; default is src/<name>
+# Lines starting with # are ignored.
+#
+# Example with an explicit dest:
+#   husarz  TheNotAura/husarz  develop  src/my_project/src/my_project_bringup
+
+transporter  bafaurazan/transporter  develop
+notaura_ws   TheNotAura/notaura_ws   develop

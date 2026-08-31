@@ -58,6 +58,7 @@ Legacy `is_*_` fields — do not refactor unless asked; **new** fields without `
 - Enum: short values (`STOPPED`, `ACTIVE`, `INACTIVE`) instead of compound ones (`SAFE_STOPPED`) when they add no information.
 - New state enum: `enum class Foo` + `FooToString()` in the same `.hpp` — details in [structure.mdc](structure.mdc).
 - Domain-bool: `resource_locked_`, not a vague `drive_permitted` when it is a lock.
+- Keep names short, but do not compress words into a private shorthand: `GetTerminalWidth`, not `GetTermWidth`. Established acronyms (`ROS`, `URI`, `XML`) are fine.
 
 ## Exclusions
 

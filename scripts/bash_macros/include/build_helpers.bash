@@ -33,6 +33,7 @@ _get_artifacts_dir() {
 }
 
 _get_pip_python() {
+    # TODO: test this with RAI framework 
     if [[ -n "${VIRTUAL_ENV:-}" && -x "${VIRTUAL_ENV}/bin/python" ]]; then
         printf '%s\n' "${VIRTUAL_ENV}/bin/python"
         return 0

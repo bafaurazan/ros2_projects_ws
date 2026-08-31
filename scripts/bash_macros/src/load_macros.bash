@@ -2,10 +2,10 @@
 
 # Usage: load_macros
 
-_macros_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+_bundle_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck disable=SC1091
-source "${_macros_dir}/include/helpers_list.bash"
-unset _macros_dir
+source "${_bundle_dir}/include/helpers_list.bash"
+unset _bundle_dir
 
 load_macros() {
     if ! load::_has_workspace_root; then
