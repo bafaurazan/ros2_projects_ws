@@ -45,6 +45,7 @@ TAB completion hides `*::*` and `_foo` on the first shell word only; git and oth
 - `diag` — environment checks and the public macro list (from launch registries).
 - `load_macros` — rediscover `scripts/bash_macros/` bundles and re-source `launch/macros.bash`.
 - `importer transporter|notaura_ws` — clone a registered subrepo (`develop`) on first use; no-op if already present. Tries `github.com`, then any `Host` aliases in `~/.ssh/config` whose `HostName` is `github.com` (falls back to `github.com` if that file is missing).
+- `notaura_ws_import_repos` (after `importer notaura_ws`) uses that same host list when cloning from `.repos` files.
 
 Entry: `scripts/bash_macros/launch/macros.bash` (used by `bash_bringup/src/macros_session.bash` and `bash_container/src/container_session.bash`).
 
