@@ -7,35 +7,35 @@
 # scripts/bash_macros/ under the workspace (sourced in place).
 #
 
-_env_is_loaded() {
+_is_session_loaded() {
     [[ -n "${_ENV_LOADED:-}" ]]
 }
 
-_env_set_loaded() {
+_set_session_loaded() {
     export _ENV_LOADED=1
 }
 
-_env_get_dir() {
+_get_session_dir() {
     cd "$(dirname "${BASH_SOURCE[0]}")" && pwd
 }
 
-_env_load() {
-    if _env_is_loaded; then
+_load_session() {
+    if _is_session_loaded; then
         return 0
     fi
-    _env_set_loaded
+    _set_session_loaded
 
     local session_dir
-    session_dir="$(_env_get_dir)"
+    session_dir="$(_get_session_dir)"
 
     # shellcheck disable=SC1091
     source "${session_dir}/../include/ros2.bash"
     # shellcheck disable=SC1091
     source "${session_dir}/../include/display.bash"
 
-    init_ros2_env
-    set_local_display_if_available
-    unset -f set_xauthority_from_local_candidates
+    _init_ros2_env
+    _set_local_display_when_available
+    unset -f _set_xauthority_from_local_candidates
 
     # shellcheck disable=SC1091
     source "${ROS2_PROJECTS_WS_ROOT}/scripts/bash_macros/launch/macros.bash"
@@ -46,4 +46,4 @@ _env_load() {
     _install_completion_filter
 }
 
-_env_load
+_load_session

@@ -11,5 +11,5 @@ CONTAINER_NAME="ros2_projects_ws_${ROS_DISTRO}"
 DISTROBOX_HOME="${WS_DIR}/.distrobox_${ROS_DISTRO}"
 CONTAINER_SESSION_SETUP="/run/host${WS_DIR}/scripts/bash_container/src/container_session.bash"
 
-ROS_IMAGE=""
+ROS2_IMAGE=""
 ADDITIONAL_PACKAGES="iputils-ping nano vim alsa-utils alsa pulseaudio git git-man python3 python-is-python3 python3-pip usbutils"

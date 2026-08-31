@@ -28,11 +28,11 @@ cbuild() {
 
     mkdir -p "$workspace_artifacts_dir"
 
-    if declare -F sanitize_overlay_paths >/dev/null 2>&1; then
-        sanitize_overlay_paths
+    if declare -F _sanitize_overlay_paths >/dev/null 2>&1; then
+        _sanitize_overlay_paths
     fi
-    if declare -F prefer_current_env_cmake >/dev/null 2>&1; then
-        prefer_current_env_cmake
+    if declare -F _prefer_current_env_cmake >/dev/null 2>&1; then
+        _prefer_current_env_cmake
     fi
 
     colcon --log-base "$log_base" build \
