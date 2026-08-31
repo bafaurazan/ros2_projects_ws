@@ -32,6 +32,7 @@ _macros_bind_namespace diag \
     _print_tool \
     _print_tools \
     _print_environment \
+    _print_importer_github_hosts \
     _get_expected_cyclone_uri \
     _has_cyclone_xml \
     _is_env_loaded \
@@ -66,7 +67,8 @@ _macros_bind_namespace load \
     _source_direct_files
 
 _macros_bind_namespace importer \
-    _get_importer_url \
+    _get_importer_repo_path \
+    _get_importer_github_hosts \
     _get_importer_branch \
     _get_importer_dir \
     _list_importer_targets \

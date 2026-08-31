@@ -46,7 +46,26 @@ _print_environment() {
     echo "RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-<unset>}"
     echo "CYCLONEDDS_URI=${CYCLONEDDS_URI:-<unset>}"
     echo "_ENV_LOADED=${_ENV_LOADED:-<unset>}"
+    _print_importer_github_hosts
     echo
+}
+
+_print_importer_github_hosts() {
+    local hosts_csv="" host
+    while IFS= read -r host; do
+        [[ -n "$host" ]] || continue
+        if [[ -n "$hosts_csv" ]]; then
+            hosts_csv+=", ${host}"
+        else
+            hosts_csv="$host"
+        fi
+    done < <(importer::_get_importer_github_hosts)
+
+    if [[ -f "${HOME}/.ssh/config" ]]; then
+        echo "importer github hosts: ${hosts_csv} (from ~/.ssh/config)"
+    else
+        echo "importer github hosts: ${hosts_csv} (default; no ~/.ssh/config)"
+    fi
 }
 
 _get_expected_cyclone_uri() {
