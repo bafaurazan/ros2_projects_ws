@@ -12,8 +12,8 @@
 # macro load_macros
 #   Rediscover scripts/bash_macros/ bundles and re-source launch/macros.bash.
 # macro importer
-#   Clone a registered subrepo on first use; no-op if already
-#   present. Targets live in scripts/bash_macros/config/importer.repos.
+#   Clone a registered subrepo on first use; ignores the command if
+#   already present. Targets live in scripts/bash_macros/config/importer.repos.
 #   Tries github.com then SSH aliases for github.com from ~/.ssh/config.
 #   Usage: importer <name>
 # @macros-end

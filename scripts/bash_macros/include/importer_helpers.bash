@@ -116,7 +116,7 @@ _ensure_repo() {
     mkdir -p "$(dirname "$dest")" || return 1
 
     if [[ -d "${dest}/.git" ]]; then
-        echo "${target} already present at ${dest} (no-op)"
+        echo "${target} already present at ${dest} — ignoring command"
         return 2
     fi
 
