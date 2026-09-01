@@ -1,6 +1,6 @@
-# L2 — C++ concurrency on this path
+# C++ concurrency on this path
 
-Read this only when the open fragment uses `std::mutex`, `std::atomic`, a worker thread, or a queue, **and** the user said `L2` or named that primitive. Tie every sentence to a **named field** in the open files. No language course. No patch.
+Read this only when the open fragment uses `std::mutex`, `std::atomic`, a worker thread, or a queue, **and** the user said `na tej ścieżce`, `co to chroni`, or named that primitive (mutex, atomic, lock, kolejka). Tie every sentence to a **named field** in the open files. No language course. No patch.
 
 ## What to name
 
@@ -39,12 +39,12 @@ Score hypotheses that say “add a mutex” without naming the shared members as
 
 Do not say “realtime” unless the open code or comments do. Name the two functions and which thread each is on.
 
-## Output (L2 add-on)
+## Output (path-concrete add-on)
 
-Add under the main score, still no patch:
+Add under the five blocks, still no patch. Match the user's language. Default Polish:
 
 ```markdown
-**L2 — `{field}`:** protects `{data}` ; writers `{fn}` ; readers `{fn}` ; delete it and `{race}`.
+**Na tej ścieżce `{pole}` chroni `{dane}`; pisze `{funkcja}`; czyta `{funkcja}`; bez tego `{wyścig}`.**
 ```
 
-One primitive at a time. If they want a fix: stop. They invent it after they can say the line above out loud.
+One primitive at a time. If they want a fix: stop. They invent it after they can say that line out loud.
