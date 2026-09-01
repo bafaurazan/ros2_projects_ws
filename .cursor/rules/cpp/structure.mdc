@@ -48,6 +48,29 @@ void ProcessTick(...) {
 
 Keep getters/setters in one block, with no logic between them. Reuse existing module API before writing your own loop (e.g. `IsErrorActive()` from a shared library).
 
+Do **not** extract a private method that is short and called from exactly one place — inline it. Same bar as one-use locals.
+
+```cpp
+// Bad — extra name, one call site
+void FlushFrameQueue() { /* pop until empty */ }
+void StartWorker() {
+    FlushFrameQueue();
+    running_.store(true);
+}
+
+// Good
+void StartWorker() {
+    {
+        std::lock_guard<std::mutex> lock(queue_mutex_);
+        while (!queue_.empty())
+            queue_.pop();
+    }
+    running_.store(true);
+}
+```
+
+Extract when the same body has (or will have) a second call site, the helper is virtual, or the extracted name documents a non-obvious invariant that the inlined block would hide.
+
 ## Variables — only when they earn their keep
 
 Do not introduce a local used **exactly once** — inline the expression.

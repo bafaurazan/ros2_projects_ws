@@ -33,18 +33,20 @@ Prefixes `Is` / `Has` / `Get` / `Set` / `Try` go on **methods**. Fields are **da
 ```cpp
 // Bool fields — adjective / participle, no is_/has_; trailing _
 std::atomic<bool> connection_active_{false};
+bool active_{false};  // CanDevice: Activate() completed; compound name when context is narrow
 std::atomic<bool> enable_requested_{false};
 std::atomic<bool> command_loop_running_{false};
 
-// Methods
+// Methods — Is/Has prefix on methods, not on fields
 bool IsConnectionActive() const { return connection_active_.load(); }
+bool IsActive() const { return active_; }
 bool SetOutputValues(int32_t ch1, int32_t ch2);
 
 // Local bools — is_/has_ OK
 const bool is_pending_activation = ...;
 ```
 
-Bad on a field: `is_active_`, `set_active_`. Good: `enable_requested_` (request) vs `connection_active_` (state).
+Bad on a field: `is_active_`, `is_activated_`, `set_active_`. Good: `enable_requested_` (request) vs `active_` / `connection_active_` (state). Legacy names in review comments or old code — use the field pattern above in **new** code.
 
 Legacy `is_*_` fields — do not refactor unless asked; **new** fields without `is_`.
 
