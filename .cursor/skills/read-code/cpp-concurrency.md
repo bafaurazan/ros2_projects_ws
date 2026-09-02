@@ -41,10 +41,18 @@ Do not say “realtime” unless the open code or comments do. Name the two func
 
 ## Output (path-concrete add-on)
 
-Add under the five blocks, still no patch. Match the user's language. Default Polish:
+Add after **Jak tu dochodzimy** (or instead of repeating the score on a follow-up). Still no patch. Match the user's language. Default Polish. One primitive at a time.
 
 ```markdown
-**Na tej ścieżce `{pole}` chroni `{dane}`; pisze `{funkcja}`; czyta `{funkcja}`; bez tego `{wyścig}`.**
+## Co ten lock / atomic tu robi
+
+| | |
+| --- | --- |
+| Pole | `{pole}` |
+| Chroni | `{dane}` |
+| Pisze | `{funkcja}` ({wątek}) |
+| Czyta | `{funkcja}` ({wątek}) |
+| Bez tego | `{wyścig}` |
 ```
 
-One primitive at a time. If they want a fix: stop. They invent it after they can say that line out loud.
+If they want a fix: stop. They invent it after they can say that table out loud.
