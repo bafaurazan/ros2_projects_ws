@@ -1,10 +1,10 @@
 # Calibrations — wrong layer / wrong file
 
-Pattern in every example: symptom → file that *looks* related → module that actually **writes** the state. Use these to score hypotheses, not as a canned architecture for other repos.
-
-In chat say **hardware interface** and **driver core**, never unlabeled HI. Never echo “room / pokój” to the user — even if you think that way internally.
+Pattern in every example: symptom → file that *looks* related → module that actually **writes** the state. Use these to score hypotheses, not as a canned architecture for other repos. Never echo “room / pokój” to the user — even if you think that way internally.
 
 ## 1. C++ — failed Activate patched in the driver core
+
+When these files are open, say **hardware interface** and **driver core**, never unlabeled HI. Do not echo those names when the open files are not this stack.
 
 **Symptom:** after a failed device activate, retry still sees an error / stale handshake. Robot does not come up cleanly.
 
@@ -68,3 +68,33 @@ hardware interface Activate / retry
 **What the author meant:** a good-looking extract or extra `ClearAll` in driver core can still be the wrong layer if retry policy lives in the hardware interface. Quality questions are not a yes: same module as the writer? same call still required? if we drop the old condition, what still breaks?
 
 **Skill must not:** say “yes, extract that.” **Must:** run the three quality questions, then stop.
+
+## 5. C++ — wrong file *inside* the hardware interface
+
+Same stack and speech rule as example 1.
+
+**Symptom:** activation, mode switch, or IO still fails after a retry. The open driver looks guilty.
+
+**Looks related:** `can_device.hpp` / a concrete `ActivateImpl` (handshake, error flags, worker). The fragment talks about Activate, so the whole bug feels like driver core.
+
+**What the author meant:** driver core vs hardware interface is example 1. The next miss is **inside** the hardware interface: `on_activate` / retry policy vs `on_deactivate` / `on_error` vs `read` / `write` vs a concrete driver `ActivateImpl`. Scoring “hardware interface” as one bucket rubber-stamps the wrong `.cpp`. The writer is one of those functions — not “the whole hardware interface” and not driver core.
+
+**Hypothesis that would have caught it:**
+
+- Ten kawałek jest od: lifecycle albo IO w hardware interface, nie od kolejki w driver core.
+- Ten stan ustawia: konkretna funkcja (`on_activate` / `on_deactivate` / `read` / `write` / `ActivateImpl`), po wywołaniu z controller managera albo z Activate.
+- Moduł który zapisuje: ten plik lifecycle/activation/io/modes — nie „cały hardware interface” i nie `can_driver_core`.
+- Kandydaci: `on_activate` vs `on_deactivate` vs `read`/`write` vs konkretny driver — który **zapisuje** ten flag; driver core tylko jeśli worker/kolejka nadal żyje po stop.
+
+**Skill must not:** accept “driver core” or “the hardware interface” as the writer. **Must:** force A/B/C *inside* the hardware interface (lifecycle vs activation vs `read`/`write` vs that driver) before scoring.
+
+**Example sketch (existing path, not a patch):**
+
+```text
+jak jest teraz
+controller manager
+  → on_activate / on_deactivate / read / write
+      → ActivateImpl albo flag w tym pliku hardware interface
+```
+
+**Example nudge after the score (do not answer it in the same turn):** Która funkcja w hardware interface **ustawia** ten stan — `on_activate`, `on_deactivate`, `read`/`write`, czy `ActivateImpl`? Otwórz to miejsce.

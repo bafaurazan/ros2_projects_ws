@@ -1,6 +1,6 @@
 # C++ concurrency on this path
 
-Read this only when the open fragment uses `std::mutex`, `std::atomic`, a worker thread, or a queue, **and** the user said `na tej ścieżce`, `co to chroni`, or named that primitive (mutex, atomic, lock, kolejka). Tie every sentence to a **named field** in the open files. No language course. No patch.
+Read this when the open fragment uses `std::mutex`, `std::atomic`, a worker thread, or a queue. Do not wait for the user to say `na tej ścieżce`, `co to chroni`, or name the primitive. Tie every sentence to a **named field** in the open files. No language course. No patch.
 
 ## What to name
 
@@ -41,7 +41,7 @@ Do not say “realtime” unless the open code or comments do. Name the two func
 
 ## Output (path-concrete add-on)
 
-Add after **Jak tu dochodzimy** (or instead of repeating the score on a follow-up). Still no patch. Match the user's language. Default Polish. One primitive at a time.
+Add after **Jak tu dochodzimy** (or instead of repeating the score on a follow-up) when the scored path has those primitives, or the hypothesis is about that path. Still no patch. Match the user's language. Default Polish. One primitive at a time.
 
 ```markdown
 ## Co ten lock / atomic tu robi
