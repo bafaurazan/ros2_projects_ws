@@ -22,6 +22,20 @@ Conventions for code with state machines and a hardware/control layer. Applies t
 
 Avoid an anonymous namespace in `.cpp` for helpers/constants that may be needed in another file — that hides API.
 
+## Class layout — fields before methods
+
+Within each access section (`public` / `protected` / `private`), member variables first, then methods. Do not insert a helper above the fields of that section.
+
+```cpp
+private:
+    bool active_{false};
+    std::mutex mutex_;
+
+    void CleanupAndResetState();
+```
+
+Bad: a private method, then the fields it uses. Applies to **new** members — do not reshuffle a whole legacy class unless asked.
+
 ## Constants
 
 - Format: `k_snake_case` (e.g. `k_mode_confirmation_timeout_ms`).

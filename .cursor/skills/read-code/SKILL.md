@@ -1,14 +1,11 @@
 ---
 name: read-code
+disable-model-invocation: true
 description: >-
   Hypothesis-first code reading: score the user's reconstruction of intent,
   causal path, and which module writes the state; do not lecture first and
-  do not write patches. Use when the user wants to understand code, asks why
-  an if/branch exists, where a fix should live, co autor miał na myśli,
-  wyjaśnij kod, czemu ten if, gdzie poprawić, understand this, wrong layer,
-  how a state is reached, na tej ścieżce, co to chroni, mutex, atomic, lock,
-  kolejka, czy ten pomysł jest OK, czy tak poprawić, jakość, refactor, czy
-  zostawić.
+  do not write patches. On-demand only — invoke when the user explicitly
+  names this skill (e.g. /read-code, "użyj read-code", "read-code").
 ---
 
 # Read code
