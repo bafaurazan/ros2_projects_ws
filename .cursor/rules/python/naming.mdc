@@ -22,4 +22,9 @@ Actions and transforms — **no** prefix: `activate()`, `parse_config()`, `build
 
 Keep names short, but spell out words a reader would have to expand (`get_terminal_width`, not `get_term_width`). Established acronyms are fine.
 
+Bool names must state a **concrete fact**, not a vague grade:
+- Good: `all_motors_activated`, `steering_activated`, `all_bms_activated`, `all_brakes_activated`
+- Bad: `ok`, `all_ok`, `motors_ok`, `success`, `status_ok`
+- Use `any_*` only when the bool truly means “at least one”
+
 Do not change framework APIs or names required by a base class / plugin.

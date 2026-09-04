@@ -55,6 +55,10 @@ Legacy `is_*_` fields — do not refactor unless asked; **new** fields without `
 - The name describes **what it is**, not what you “meant to achieve”.
   - Good: `GetInterfaceName()`
   - Bad: `ClaimName()` — this is not a “claim”
+- **Bool names must state a concrete fact**, not a vague grade.
+  - Good: `all_motors_activated`, `steering_activated`, `all_bms_activated`, `all_brakes_activated`, `hv_transition_succeeded`
+  - Bad: `ok`, `all_ok`, `motors_ok`, `success`, `status_ok`, `result`, `any_activated` when the contract is “every device” — reader cannot tell *what* is true
+  - Prefer participle / predicate over empty intensifiers (`all` alone, `ok`, `fine`, `good`). Use `any_*` only when the bool truly means “at least one”.
 - **Same terminology** throughout the file (`account`, not `user` if the rest uses `accounts_`).
 - **Existing pattern in the file** wins: `ConnectionStateToString` → new enums also `FooToString`, not `HardwareStateName`.
 - Enum: short values (`STOPPED`, `ACTIVE`, `INACTIVE`) instead of compound ones (`SAFE_STOPPED`) when they add no information.
