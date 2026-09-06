@@ -1,8 +1,8 @@
 #!/usr/bin/bash
 
-# Private helpers for build/cbuild (short names). Bound to build::_* via helpers_list.bash.
+# Private helpers for build/cbuild. Bodies are build::_*.
 
-_require_ros_toolchain() {
+build::_require_ros_toolchain() {
     local mode="${1:-cbuild}"
     local -a missing=()
 
@@ -20,20 +20,20 @@ _require_ros_toolchain() {
     return 1
 }
 
-_has_src_dir() {
+build::_has_src_dir() {
     [[ -d "./src" ]]
 }
 
-_get_ros_distro() {
+build::_get_ros_distro() {
     printf '%s\n' "${ROS_DISTRO:-humble}"
 }
 
-_get_artifacts_dir() {
+build::_get_artifacts_dir() {
     printf '%s\n' "build_ws"
 }
 
-_get_pip_python() {
-    # TODO: test this with RAI framework 
+build::_get_pip_python() {
+    # TODO: test this with RAI framework
     if [[ -n "${VIRTUAL_ENV:-}" && -x "${VIRTUAL_ENV}/bin/python" ]]; then
         printf '%s\n' "${VIRTUAL_ENV}/bin/python"
         return 0
@@ -49,21 +49,21 @@ _get_pip_python() {
     command -v python3
 }
 
-_is_venv_python() {
+build::_is_venv_python() {
     local pip_python="$1"
     [[ -n "${VIRTUAL_ENV:-}" && "$pip_python" == "${VIRTUAL_ENV}/bin/python" ]] \
         || [[ "$pip_python" == "$(pwd)/.venv/bin/python" ]] \
         || [[ "$pip_python" == "$(pwd)/venv/bin/python" ]]
 }
 
-_has_externally_managed_python() {
+build::_has_externally_managed_python() {
     local pip_python="$1"
     local py_stdlib
     py_stdlib="$("$pip_python" -c 'import sysconfig; print(sysconfig.get_path("stdlib"))' 2>/dev/null || true)"
     [[ -n "$py_stdlib" && -f "${py_stdlib}/EXTERNALLY-MANAGED" ]]
 }
 
-_collect_rosdep_paths() {
+build::_collect_rosdep_paths() {
     local -a rosdep_paths=(./src)
     declare -A seen=()
     seen["./src"]=1
@@ -80,7 +80,7 @@ _collect_rosdep_paths() {
     printf '%s\n' "${rosdep_paths[@]}"
 }
 
-_install_apt_packages() {
+build::_install_apt_packages() {
     local apt_file apt_pkg
     while IFS= read -r apt_file; do
         [[ -n "$apt_file" ]] || continue
@@ -92,15 +92,15 @@ _install_apt_packages() {
     done < <(find ./src -type f -name apt_packages.txt)
 }
 
-_install_pip_requirements() {
+build::_install_pip_requirements() {
     local pip_python pip_args req_file
-    pip_python="$(_get_pip_python)"
+    pip_python="$(build::_get_pip_python)"
     pip_args=(-r)
 
-    if _is_venv_python "$pip_python"; then
+    if build::_is_venv_python "$pip_python"; then
         echo "PIP target: venv ($pip_python)"
     else
-        if _has_externally_managed_python "$pip_python"; then
+        if build::_has_externally_managed_python "$pip_python"; then
             pip_args=(--break-system-packages -r)
         fi
         echo "PIP target: system Python ($pip_python)"
@@ -112,7 +112,7 @@ _install_pip_requirements() {
     done < <(find ./src -type f -name requirements.txt)
 }
 
-_source_install_overlay() {
+build::_source_install_overlay() {
     local install_base="$1"
     [[ -f "./${install_base}/local_setup.bash" ]] || return 0
 

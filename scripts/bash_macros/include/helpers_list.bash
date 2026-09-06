@@ -1,10 +1,6 @@
 #!/usr/bin/bash
 
-# Bind short helper names to ns::_* entry points (C++-like namespace look).
-# Short names stay defined so helpers can call each other; do not unset them.
-
-[[ -n "${_MACROS_HELPERS_LIST_LOADED:-}" ]] && return
-_MACROS_HELPERS_LIST_LOADED=1
+# Source namespaced helper bodies (diag:: / build:: / load:: / importer::).
 
 _helpers_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
@@ -15,64 +11,4 @@ source "${_helpers_dir}/build_helpers.bash"
 source "${_helpers_dir}/load_helpers.bash"
 # shellcheck disable=SC1091
 source "${_helpers_dir}/importer_helpers.bash"
-
-_bind_namespace() {
-    local namespace="$1"
-    shift
-    local short
-    for short in "$@"; do
-        # shellcheck disable=SC2329
-        eval "${namespace}::${short}() { ${short} \"\$@\"; }"
-    done
-}
-
-_bind_namespace diag \
-    _has_command \
-    _print_system \
-    _print_tool \
-    _print_tools \
-    _print_environment \
-    _print_github_hosts \
-    _get_expected_cyclone_uri \
-    _has_cyclone_xml \
-    _is_env_loaded \
-    _print_checks \
-    _get_terminal_width \
-    _wrap_text \
-    _parse_macro_registry \
-    _print_macro_block \
-    _print_macros
-
-_bind_namespace build \
-    _require_ros_toolchain \
-    _has_src_dir \
-    _get_ros_distro \
-    _get_artifacts_dir \
-    _get_pip_python \
-    _is_venv_python \
-    _has_externally_managed_python \
-    _collect_rosdep_paths \
-    _install_apt_packages \
-    _install_pip_requirements \
-    _source_install_overlay
-
-_bind_namespace load \
-    _get_repo_from_path \
-    _has_workspace_root \
-    _find_sources \
-    _list_api_files \
-    _extract_functions \
-    _has_nounset \
-    _source_bundle_macros \
-    _source_direct_files
-
-_bind_namespace importer \
-    _get_repo_path \
-    _get_github_hosts \
-    _get_branch \
-    _get_clone_dir \
-    _list_targets \
-    _ensure_repo
-
-unset -f _bind_namespace
 unset _helpers_dir

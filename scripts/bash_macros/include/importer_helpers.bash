@@ -1,19 +1,19 @@
 #!/usr/bin/bash
 
-# Private helpers for importer (short names). Bound to importer::_* via helpers_list.bash.
+# Private helpers for importer. Bodies are importer::_*.
 
-_get_config_path() {
+importer::_get_config_path() {
     local bundle_dir
     bundle_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
     printf '%s\n' "${bundle_dir}/config/importer.repos"
 }
 
 # Fields: 1=name 2=github_path 3=branch 4=dest (optional)
-_get_target_field() {
+importer::_get_target_field() {
     local target="$1"
     local field="$2"
     local file
-    file="$(_get_config_path)"
+    file="$(importer::_get_config_path)"
     [[ -f "$file" ]] || return 1
     awk -v t="$target" -v f="$field" '
         {
@@ -25,9 +25,9 @@ _get_target_field() {
     ' "$file"
 }
 
-_list_config_targets() {
+importer::_list_config_targets() {
     local file
-    file="$(_get_config_path)"
+    file="$(importer::_get_config_path)"
     [[ -f "$file" ]] || return 0
     awk '
         {
@@ -38,11 +38,11 @@ _list_config_targets() {
     ' "$file"
 }
 
-_get_repo_path() {
-    _get_target_field "$1" 2
+importer::_get_repo_path() {
+    importer::_get_target_field "$1" 2
 }
 
-_get_github_hosts() {
+importer::_get_github_hosts() {
     local -a hosts=("github.com")
     local ssh_config="${HOME}/.ssh/config"
 
@@ -65,23 +65,23 @@ _get_github_hosts() {
     printf '%s\n' "${hosts[@]}" | awk '!seen[$0]++'
 }
 
-_get_branch() {
-    _get_target_field "$1" 3
+importer::_get_branch() {
+    importer::_get_target_field "$1" 3
 }
 
-_get_clone_dir() {
+importer::_get_clone_dir() {
     local target="$1"
     local dest
-    dest="$(_get_target_field "$target" 4)"
+    dest="$(importer::_get_target_field "$target" 4)"
     if [[ -z "$dest" ]]; then
         dest="src/${target}"
     fi
     printf '%s\n' "${ROS2_PROJECTS_WS_ROOT:?ROS2_PROJECTS_WS_ROOT is not set}/${dest}"
 }
 
-_list_targets() {
+importer::_list_targets() {
     local file target dest
-    file="$(_get_config_path)"
+    file="$(importer::_get_config_path)"
     echo "Usage: importer <target>"
     echo "Targets (from ${file}):"
     if [[ ! -f "$file" ]]; then
@@ -90,13 +90,13 @@ _list_targets() {
     fi
     while IFS= read -r target; do
         [[ -n "$target" ]] || continue
-        dest="$(_get_target_field "$target" 4)"
+        dest="$(importer::_get_target_field "$target" 4)"
         [[ -n "$dest" ]] || dest="src/${target}"
         echo "  ${target}    ${ROS2_PROJECTS_WS_ROOT:-<workspace>}/${dest}"
-    done < <(_list_config_targets)
+    done < <(importer::_list_config_targets)
 }
 
-_ensure_repo() {
+importer::_ensure_repo() {
     local target="$1"
     local repo_path branch dest host url tried=""
 
@@ -105,13 +105,13 @@ _ensure_repo() {
         return 1
     fi
 
-    repo_path="$(_get_repo_path "$target")" || {
+    repo_path="$(importer::_get_repo_path "$target")" || {
         echo "importer: unknown target '$target'" >&2
-        _list_targets >&2
+        importer::_list_targets >&2
         return 1
     }
-    branch="$(_get_branch "$target")" || return 1
-    dest="$(_get_clone_dir "$target")"
+    branch="$(importer::_get_branch "$target")" || return 1
+    dest="$(importer::_get_clone_dir "$target")"
 
     mkdir -p "$(dirname "$dest")" || return 1
 
@@ -145,7 +145,7 @@ _ensure_repo() {
         if [[ -e "$dest" ]]; then
             rm -rf "$dest"
         fi
-    done < <(_get_github_hosts)
+    done < <(importer::_get_github_hosts)
 
     echo "importer: failed to clone ${target} via: ${tried:-<none>}" >&2
     return 1

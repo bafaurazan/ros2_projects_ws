@@ -1,8 +1,8 @@
 #!/usr/bin/bash
 
-# Private helpers for load_macros (short names). Bound to load::_* via helpers_list.bash.
+# Private helpers for load_macros. Bodies are load::_*.
 
-_get_repo_from_path() {
+load::_get_repo_from_path() {
     # …/<repo>/scripts/bash_macros → <repo>
     local macros_dir="$1"
     local scripts_dir
@@ -10,11 +10,11 @@ _get_repo_from_path() {
     basename "$(dirname "$scripts_dir")"
 }
 
-_has_workspace_root() {
+load::_has_workspace_root() {
     [[ -n "${ROS2_PROJECTS_WS_ROOT:-}" ]]
 }
 
-_find_sources() {
+load::_find_sources() {
     local root="$1"
     local src_root="${root}/src"
     local macros_dir
@@ -38,7 +38,7 @@ _find_sources() {
     )
 }
 
-_list_api_files() {
+load::_list_api_files() {
     local src="$1"
     local file
     shopt -s nullglob
@@ -50,7 +50,7 @@ _list_api_files() {
     shopt -u nullglob
 }
 
-_extract_functions() {
+load::_extract_functions() {
     local file="$1"
     local line name
     while IFS= read -r line; do
@@ -61,28 +61,28 @@ _extract_functions() {
     done < <(grep -E '^[[:space:]]*(function[[:space:]]+)?([a-zA-Z_][a-zA-Z0-9_]*::)*[a-zA-Z_][a-zA-Z0-9_]*[[:space:]]*\(\)' "$file" 2>/dev/null || true)
 }
 
-_has_nounset() {
+load::_has_nounset() {
     [[ $- == *u* ]]
 }
 
-_source_bundle_macros() {
+load::_source_bundle_macros() {
     local bundle="$1"
     [[ -f "${bundle}/launch/macros.bash" ]] || return 0
     # shellcheck disable=SC1091
     source "${bundle}/launch/macros.bash"
 }
 
-_source_direct_files() {
+load::_source_direct_files() {
     local had_nounset=0
     local src
 
-    if _has_nounset; then
+    if load::_has_nounset; then
         had_nounset=1
         set +u
     fi
 
     for src in "$@"; do
-        _source_bundle_macros "$src"
+        load::_source_bundle_macros "$src"
     done
 
     if [[ "$had_nounset" -eq 1 ]]; then

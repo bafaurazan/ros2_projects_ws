@@ -72,4 +72,11 @@ load_macros() {
     if [[ ${#source_dirs[@]} -gt 0 ]]; then
         load::_source_direct_files "${source_dirs[@]}"
     fi
+
+    local completion_file="${root}/scripts/bash_macros/include/completion.bash"
+    if [[ -f "$completion_file" ]]; then
+        # shellcheck disable=SC1090
+        source "$completion_file"
+        _install_macros_completion
+    fi
 }

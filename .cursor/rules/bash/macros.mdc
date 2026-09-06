@@ -1,5 +1,5 @@
 ---
-description: "Bash: scripts/bash_macros bundles, namespace without duplication"
+description: "Bash: scripts/bash_macros bundles, namespaced helper bodies"
 globs: "{scripts/**/*.bash,**/scripts/bash_macros/**}"
 alwaysApply: false
 ---
@@ -10,20 +10,24 @@ Prefixes → [naming.mdc](naming.mdc). Bundle layout: [../../../scripts/bash_mac
 
 Applies to projects with `scripts/bash_macros/` and `load_macros`. Public macros (`build`, `cbuild`, `diag`, `load_macros`, `importer`) — **no** prefix.
 
-## Namespace — do not duplicate the bundle name
+Same helper names and completion must work on **Windows/Git Bash** (`./scripts/setup.bash macros`) and **native Linux** (macros or Distrobox). Do not add per-OS naming.
 
-`_bind_namespace` turns function `name` into `namespace::name`. If the helper is `_diag_search`, the API is `diag::_diag_search`.
+## Helpers are `ns::_name` bodies
+
+Define the helper as `namespace::_name`. That string is the runtime name. Do not keep a short global `_name`, and do not wrap shorts with `_bind_namespace`.
 
 ```bash
-# Bad — double prefix
-_diag_search_something() { ... }
-_bind_namespace diag _diag_search_something
-# → diag::_diag_search_something
+# Bad — short global (collides across bundles)
+_get_dir() { ... }
+_bind_namespace tr _get_dir
 
-# Good — the namespace already provides context
-_search_something() { ... }
-_bind_namespace diag _search_something
-# → diag::_search_something
+# Bad — bundle name twice
+tr::_tr_get_dir() { ... }
+
+# Good — one name in source and at runtime
+tr::_get_dir() { ... }
 ```
 
-The function name **must not** include the bundle name (`diag`, `build`, `load`, `tr`, …) — the namespace already adds it in the public API.
+Call helpers as `tr::_get_dir` from public macros and from other helpers. The function name **must not** repeat the bundle name after `::`.
+
+Bash has no private functions. `ns::_…` is a convention: unique across bundles, skipped by `load_macros` collision checks, hidden from TAB. The name stays in the shell.

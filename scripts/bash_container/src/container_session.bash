@@ -43,7 +43,7 @@ _load_session() {
 
     # shellcheck disable=SC1091
     source "${ROS2_PROJECTS_WS_ROOT}/scripts/bash_macros/include/completion.bash"
-    _install_completion_filter
+    _install_macros_completion
 }
 
 _load_session

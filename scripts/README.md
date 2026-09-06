@@ -39,7 +39,8 @@ bash_container/
 bash_macros/
   launch/macros.bash                    # @macros registry + source src/*.bash
   src/                                  # build, cbuild, diag, load_macros, importer
-  include/                              # helpers + TAB completion filter
+  include/                              # namespaced helpers + TAB completion
+  config/                               # importer.repos
 ```
 
 Macros convention: [bash_macros/README.md](bash_macros/README.md)
