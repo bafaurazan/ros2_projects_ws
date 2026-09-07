@@ -64,6 +64,7 @@ After `load_macros`, public macros get a compspec. First-word TAB prefers those 
 - `diag` — environment checks and the public macro list (from launch registries).
 - `load_macros` — rediscover `scripts/bash_macros/` bundles and re-source `launch/macros.bash`.
 - `importer <name>` — clone a target from `config/importer.repos` on first use; ignores the command if already present. Tries `github.com`, then any `Host` aliases in `~/.ssh/config` whose `HostName` is `github.com` (falls back to `github.com` if that file is missing).
+- `git_ws <path> [path ...]` — recursively discover git repos under the given paths (skips `build` / `build_ws` / `install` / `log` / `trash`), `git fetch --prune`, report `ok` / `pull` / `push` / `manual`, then one `y/N` to apply safe `pull --ff-only` / `push` when any exist.
 
 Entry: `scripts/bash_macros/launch/macros.bash` (used by `bash_env/launch/backends/run_macros.bash` and in-container/in-image paths of `run_distrobox.bash` / `run_docker.bash`).
 

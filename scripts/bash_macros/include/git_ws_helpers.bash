@@ -1,0 +1,210 @@
+#!/usr/bin/bash
+
+# Private helpers for git_ws. Bodies are git_ws::_*.
+
+git_ws::_usage() {
+    echo "Usage: git_ws <path> [path ...]" >&2
+    echo "  Discover git repos under the given paths, fetch, report status," >&2
+    echo "  and optionally apply safe pull/push." >&2
+    echo "  Example: git_ws .   # all nested repos under workspace root" >&2
+    echo "           git_ws src/notaura_ws/docs src/notaura_ws/src" >&2
+}
+
+git_ws::_canonicalize() {
+    local path="$1"
+    (cd "$path" && pwd) 2>/dev/null
+}
+
+git_ws::_get_display_path() {
+    local toplevel="$1"
+    local root="${ROS2_PROJECTS_WS_ROOT:-}"
+    local top_norm root_norm
+    top_norm="$(git_ws::_canonicalize "$toplevel" || printf '%s\n' "$toplevel")"
+    if [[ -n "$root" ]]; then
+        root_norm="$(git_ws::_canonicalize "$root" || printf '%s\n' "$root")"
+        if [[ "$top_norm" == "$root_norm" ]]; then
+            printf '%s\n' "."
+            return 0
+        fi
+        if [[ "$top_norm" == "$root_norm"/* ]]; then
+            printf '%s\n' "${top_norm#"${root_norm}/"}"
+            return 0
+        fi
+    fi
+    printf '%s\n' "$top_norm"
+}
+
+git_ws::_is_git_dir() {
+    local path="$1"
+    [[ -e "${path}/.git" ]]
+}
+
+git_ws::_require_paths() {
+    local path
+    for path in "$@"; do
+        if [[ ! -e "$path" ]]; then
+            echo "git_ws: path not found: ${path}" >&2
+            return 1
+        fi
+    done
+}
+
+# Print unique repo toplevels under the given paths (one per line).
+# Always includes a path that is itself a git root, then recursively finds
+# nested .git entries under the path (pruning build/build_ws/install/log/trash).
+# Paths must already exist (see git_ws::_require_paths).
+git_ws::_find_repos() {
+    local -A seen=()
+    local path abs git_entry repo_dir toplevel top_norm
+
+    for path in "$@"; do
+        abs="$(git_ws::_canonicalize "$path")" || return 1
+
+        if git_ws::_is_git_dir "$abs"; then
+            toplevel="$(git -C "$abs" rev-parse --show-toplevel 2>/dev/null)" || {
+                echo "git_ws: not a usable git repo: ${abs}" >&2
+                return 1
+            }
+            top_norm="$(git_ws::_canonicalize "$toplevel" || printf '%s\n' "$toplevel")"
+            if [[ -z ${seen[$top_norm]+x} ]]; then
+                seen[$top_norm]=1
+                printf '%s\n' "$top_norm"
+            fi
+        fi
+
+        while IFS= read -r -d '' git_entry; do
+            repo_dir="$(dirname "$git_entry")"
+            toplevel="$(git -C "$repo_dir" rev-parse --show-toplevel 2>/dev/null)" || continue
+            top_norm="$(git_ws::_canonicalize "$toplevel" || printf '%s\n' "$toplevel")"
+            if [[ -z ${seen[$top_norm]+x} ]]; then
+                seen[$top_norm]=1
+                printf '%s\n' "$top_norm"
+            fi
+        done < <(
+            find "$abs" -maxdepth 12 \
+                \( -name build -o -name build_ws -o -name install -o -name log -o -name trash \) -prune -o \
+                \( -name .git -print0 -prune \) 2>/dev/null
+        )
+    done
+}
+
+git_ws::_is_dirty() {
+    local dir="$1"
+    [[ -n "$(git -C "$dir" status --porcelain 2>/dev/null)" ]]
+}
+
+# Sets: _gw_branch _gw_upstream _gw_ahead _gw_behind _gw_action _gw_reason _gw_fetch_ok
+git_ws::_classify() {
+    local dir="$1"
+    _gw_branch=""
+    _gw_upstream=""
+    _gw_ahead=0
+    _gw_behind=0
+    _gw_action="manual"
+    _gw_reason=""
+    _gw_fetch_ok=0
+
+    if ! git -C "$dir" fetch --prune >/dev/null 2>&1; then
+        _gw_reason="fetch failed"
+        _gw_branch="$(git -C "$dir" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")"
+        return 0
+    fi
+    _gw_fetch_ok=1
+
+    _gw_branch="$(git -C "$dir" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")"
+    if [[ "$_gw_branch" == "HEAD" ]]; then
+        _gw_reason="detached HEAD"
+        return 0
+    fi
+
+    if ! _gw_upstream="$(git -C "$dir" rev-parse --abbrev-ref '@{u}' 2>/dev/null)"; then
+        _gw_upstream=""
+        _gw_reason="no upstream"
+        return 0
+    fi
+
+    if git_ws::_is_dirty "$dir"; then
+        _gw_reason="uncommitted changes"
+        _gw_ahead="$(git -C "$dir" rev-list --count "${_gw_upstream}..HEAD" 2>/dev/null || echo 0)"
+        _gw_behind="$(git -C "$dir" rev-list --count "HEAD..${_gw_upstream}" 2>/dev/null || echo 0)"
+        return 0
+    fi
+
+    _gw_ahead="$(git -C "$dir" rev-list --count "${_gw_upstream}..HEAD" 2>/dev/null || echo 0)"
+    _gw_behind="$(git -C "$dir" rev-list --count "HEAD..${_gw_upstream}" 2>/dev/null || echo 0)"
+
+    if [[ "$_gw_ahead" -gt 0 && "$_gw_behind" -gt 0 ]]; then
+        _gw_reason="diverged (ahead ${_gw_ahead}, behind ${_gw_behind})"
+        return 0
+    fi
+    if [[ "$_gw_behind" -gt 0 ]]; then
+        _gw_action="pull"
+        _gw_reason=""
+        return 0
+    fi
+    if [[ "$_gw_ahead" -gt 0 ]]; then
+        _gw_action="push"
+        _gw_reason=""
+        return 0
+    fi
+
+    _gw_action="ok"
+    _gw_reason=""
+}
+
+git_ws::_print_repo_line() {
+    local display="$1"
+    local branch="$2"
+    local upstream="$3"
+    local ahead="$4"
+    local behind="$5"
+    local action="$6"
+    local reason="$7"
+
+    local sync="ahead ${ahead}, behind ${behind}"
+    local up_txt="${upstream:-none}"
+    local line="[${action}] ${display}  branch=${branch}  upstream=${up_txt}  ${sync}"
+    if [[ -n "$reason" ]]; then
+        line+="  (${reason})"
+    fi
+    printf '%s\n' "$line"
+}
+
+git_ws::_confirm_apply() {
+    local count="$1"
+    local reply=""
+    printf 'Apply safe pull/push on %s repo(s)? [y/N] ' "$count"
+    read -r reply || true
+    [[ "$reply" == "y" || "$reply" == "Y" ]]
+}
+
+git_ws::_apply_safe() {
+    local dir="$1"
+    local action="$2"
+    local display
+    display="$(git_ws::_get_display_path "$dir")"
+
+    case "$action" in
+        pull)
+            echo "→ pull --ff-only: ${display}"
+            if git -C "$dir" pull --ff-only; then
+                echo "  ok"
+            else
+                echo "  FAILED" >&2
+                return 1
+            fi
+            ;;
+        push)
+            echo "→ push: ${display}"
+            if git -C "$dir" push; then
+                echo "  ok"
+            else
+                echo "  FAILED" >&2
+                return 1
+            fi
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+}

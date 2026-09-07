@@ -16,6 +16,11 @@
 #   already present. Targets live in scripts/bash_macros/config/importer.repos.
 #   Tries github.com then SSH aliases for github.com from ~/.ssh/config.
 #   Usage: importer <name>
+# macro git_ws
+#   Discover git repos under given paths recursively (skips
+#   build/build_ws/install/log/trash). git fetch --prune, report
+#   ok/pull/push/manual, then one y/N to apply safe pull --ff-only / push.
+#   Paths required. Usage: git_ws <path> [path ...]
 # @macros-end
 
 # shellcheck disable=SC1091
