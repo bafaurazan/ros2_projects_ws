@@ -23,17 +23,18 @@ cbuild() {
 
     mkdir -p "$workspace_artifacts_dir"
 
-    if declare -F _sanitize_overlay_paths >/dev/null 2>&1; then
-        _sanitize_overlay_paths
+    if declare -F env::_sanitize_overlay_paths >/dev/null 2>&1; then
+        env::_sanitize_overlay_paths
     fi
-    if declare -F _prefer_current_env_cmake >/dev/null 2>&1; then
-        _prefer_current_env_cmake
+    if declare -F env::_prefer_current_env_cmake >/dev/null 2>&1; then
+        env::_prefer_current_env_cmake
     fi
 
     colcon --log-base "$log_base" build \
         --base-paths "./src" \
         --build-base "$build_base" \
         --install-base "$install_base" \
+        --symlink-install \
         "$@"
     local colcon_status=$?
     if [[ "$colcon_status" -ne 0 ]]; then

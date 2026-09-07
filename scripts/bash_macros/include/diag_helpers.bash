@@ -82,6 +82,10 @@ diag::_is_env_loaded() {
     [[ "${_ENV_LOADED:-}" == "1" ]]
 }
 
+diag::_is_macros_loaded() {
+    [[ -n "${_MACROS_LOADED:-}" ]]
+}
+
 diag::_print_checks() {
     echo "=== Checks (env setup) ==="
     local ok=true
@@ -89,52 +93,62 @@ diag::_print_checks() {
     local expected_cyclone_uri=""
     expected_cyclone_uri="$(diag::_get_expected_cyclone_uri 2>/dev/null || true)"
 
-    if [[ "${RMW_IMPLEMENTATION:-}" == "$expected_rmw" ]]; then
-        echo "[OK] RMW_IMPLEMENTATION is $expected_rmw"
-    else
-        echo "[FAIL] RMW_IMPLEMENTATION should be $expected_rmw"
-        ok=false
-    fi
-
-    if [[ -n "$expected_cyclone_uri" && "${CYCLONEDDS_URI:-}" == "$expected_cyclone_uri" ]]; then
-        echo "[OK] CYCLONEDDS_URI matches workspace path"
-    else
-        echo "[FAIL] CYCLONEDDS_URI does not match expected workspace path"
-        ok=false
-    fi
-
-    if diag::_has_cyclone_xml; then
-        echo "[OK] cyclone-dds.xml exists"
-    else
-        echo "[FAIL] cyclone-dds.xml missing"
-        ok=false
-    fi
-
     if diag::_is_env_loaded; then
+        if [[ "${RMW_IMPLEMENTATION:-}" == "$expected_rmw" ]]; then
+            echo "[OK] RMW_IMPLEMENTATION is $expected_rmw"
+        else
+            echo "[FAIL] RMW_IMPLEMENTATION should be $expected_rmw"
+            ok=false
+        fi
+
+        if [[ -n "$expected_cyclone_uri" && "${CYCLONEDDS_URI:-}" == "$expected_cyclone_uri" ]]; then
+            echo "[OK] CYCLONEDDS_URI matches workspace path"
+        else
+            echo "[FAIL] CYCLONEDDS_URI does not match expected workspace path"
+            ok=false
+        fi
+
+        if diag::_has_cyclone_xml; then
+            echo "[OK] cyclone-dds.xml exists"
+        else
+            echo "[FAIL] cyclone-dds.xml missing"
+            ok=false
+        fi
+
         echo "[OK] env setup load marker is set"
-    else
-        echo "[FAIL] env setup load marker is not set"
-        ok=false
-    fi
 
-    if diag::_has_command cmake && cmake --version >/dev/null 2>&1; then
-        echo "[OK] cmake works ($(command -v cmake))"
-    else
-        echo "[FAIL] cmake is missing or broken"
-        ok=false
-    fi
+        if diag::_has_command cmake && cmake --version >/dev/null 2>&1; then
+            echo "[OK] cmake works ($(command -v cmake))"
+        else
+            echo "[FAIL] cmake is missing or broken"
+            ok=false
+        fi
 
-    if [[ "${CMAKE_COMMAND:-}" == /usr/bin/cmake ]]; then
-        echo "[OK] CMAKE_COMMAND points to system cmake"
-    elif [[ -x /usr/bin/cmake ]]; then
-        echo "[FAIL] CMAKE_COMMAND should be /usr/bin/cmake"
+        if [[ "${CMAKE_COMMAND:-}" == /usr/bin/cmake ]]; then
+            echo "[OK] CMAKE_COMMAND points to system cmake"
+        elif [[ -x /usr/bin/cmake ]]; then
+            echo "[FAIL] CMAKE_COMMAND should be /usr/bin/cmake"
+            ok=false
+        fi
+    elif diag::_is_macros_loaded; then
+        echo "[OK] macros session load marker is set"
+        echo "[SKIP] RMW_IMPLEMENTATION (macros-only session)"
+        echo "[SKIP] CYCLONEDDS_URI (macros-only session)"
+        if diag::_has_cyclone_xml; then
+            echo "[OK] cyclone-dds.xml exists"
+        else
+            echo "[SKIP] cyclone-dds.xml missing (macros-only session)"
+        fi
+        echo "[SKIP] env setup load marker (macros-only session)"
+        echo "[SKIP] cmake / CMAKE_COMMAND (macros-only session)"
+    else
+        echo "[FAIL] neither env setup nor macros session load marker is set"
         ok=false
     fi
 
     echo
     [[ "$ok" == true ]]
 }
-
 diag::_get_terminal_width() {
     local width="${COLUMNS:-}"
     if [[ -z "$width" ]] && command -v tput >/dev/null 2>&1; then
