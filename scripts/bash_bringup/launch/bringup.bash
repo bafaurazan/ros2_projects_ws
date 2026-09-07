@@ -28,4 +28,4 @@ source "${_bringup_dir}/../include/bringup_helpers.bash"
 source "${_bringup_dir}/../src/dispatch.bash"
 unset _bringup_dir
 
-_dispatch
+bringup::_dispatch

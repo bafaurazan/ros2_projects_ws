@@ -1,6 +1,6 @@
 # bash_container
 
-Container runtime for the workspace (Distrobox today; Docker/Podman reserved via `prod`). Distrobox (`humble` / `jazzy`) is **native Linux only** — blocked on Windows/Git Bash and WSL.
+Container runtime for the workspace (Distrobox today; Docker/Podman reserved via `prod`). Distrobox (`humble` / `jazzy`) is **native Linux only** — blocked on Windows/Git Bash and WSL. Helpers are `container::_name`.
 
 | Path | Role |
 |------|------|

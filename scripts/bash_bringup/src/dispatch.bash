@@ -2,23 +2,23 @@
 
 # Compose humble|jazzy|macros. Sourced by launch/bringup.bash after helpers.
 
-_run_container() {
+bringup::_run_container() {
     exec "${ROS2_PROJECTS_WS_ROOT}/scripts/bash_container/launch/runtime_dispatch.bash" "$_mode" "$_runtime"
 }
 
-_run_macros() {
-    if _has_runtime "$_runtime"; then
-        _fail "mode 'macros' does not take extra arguments."
+bringup::_run_macros() {
+    if bringup::_has_runtime "$_runtime"; then
+        bringup::_fail "mode 'macros' does not take extra arguments."
         return 1
     fi
 
     local macros_session="${ROS2_PROJECTS_WS_ROOT}/scripts/bash_bringup/src/macros_session.bash"
 
-    if _is_sourced; then
+    if bringup::_is_sourced; then
         # shellcheck disable=SC1090
         source "$macros_session"
         local status=$?
-        _cleanup
+        bringup::_cleanup
         return "$status"
     fi
 
@@ -26,23 +26,23 @@ _run_macros() {
     exec bash --rcfile "$macros_session" -i
 }
 
-_dispatch() {
-    if _is_distro_mode "$_mode"; then
-        _run_container
+bringup::_dispatch() {
+    if bringup::_is_distro_mode "$_mode"; then
+        bringup::_run_container
         return 0
     fi
 
     case "$_mode" in
         macros)
-            _run_macros
+            bringup::_run_macros
             return $?
             ;;
         "")
-            _fail "missing mode."
+            bringup::_fail "missing mode."
             return 1
             ;;
         *)
-            _fail "unknown mode '${_mode}'."
+            bringup::_fail "unknown mode '${_mode}'."
             return 1
             ;;
     esac

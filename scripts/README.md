@@ -43,4 +43,4 @@ bash_macros/
   config/                               # importer.repos
 ```
 
-Macros convention: [bash_macros/README.md](bash_macros/README.md)
+Macros convention: [bash_macros/README.md](bash_macros/README.md). Helpers in `bash_bringup` / `bash_container` use the same `ns::_name` form (`bringup::` / `container::`).
