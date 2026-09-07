@@ -70,12 +70,12 @@ diag::_print_github_hosts() {
 
 diag::_get_expected_cyclone_uri() {
     [[ -n "${ROS2_PROJECTS_WS_ROOT:-}" ]] || return 1
-    printf '%s\n' "file://${ROS2_PROJECTS_WS_ROOT}/scripts/bash_container/config/cyclone-dds.xml"
+    printf '%s\n' "file://${ROS2_PROJECTS_WS_ROOT}/scripts/bash_env/config/cyclone-dds.xml"
 }
 
 diag::_has_cyclone_xml() {
     [[ -n "${ROS2_PROJECTS_WS_ROOT:-}" \
-        && -f "${ROS2_PROJECTS_WS_ROOT}/scripts/bash_container/config/cyclone-dds.xml" ]]
+        && -f "${ROS2_PROJECTS_WS_ROOT}/scripts/bash_env/config/cyclone-dds.xml" ]]
 }
 
 diag::_is_env_loaded() {

@@ -36,16 +36,16 @@ hardware interface Activate / retry
 
 **Symptom:** `./scripts/setup.bash humble` fails on this machine (not Linux, missing distrobox, GPU/image, container create).
 
-**Looks related:** [`runtime_dispatch.bash`](../../../scripts/bash_container/launch/runtime_dispatch.bash). It is the file `setup.bash` runs. It looks like “the entrypoint”.
+**Looks related:** [`runtime_dispatch.bash`](../../../scripts/bash_env/launch/runtime_dispatch.bash). It is the file `setup.bash` runs after bringup. It looks like “the entrypoint”.
 
-**What the author meant:** dispatch only chooses a backend (`humble`/`jazzy` → Distrobox, `prod` → Docker). Platform refuse and `exec` live here. **Creating, entering, and session hook** live in [`distrobox_enter.bash`](../../../scripts/bash_container/src/distrobox/distrobox_enter.bash) and [`container_session.bash`](../../../scripts/bash_container/src/container_session.bash) (ROS, display, macros inside the container). A create/enter/GPU/image bug is not a dispatcher bug. Adding Distrobox logic to `runtime_dispatch.bash` is the bash analog of patching driver core for hardware-interface policy.
+**What the author meant:** dispatch only chooses a backend (`macros` → host, `humble`/`jazzy` → Distrobox, `prod` → Docker). Platform refuse and `exec` live here. **Creating, entering, and in-container session** live in [`impl_distrobox.bash`](../../../scripts/bash_env/src/impl_distrobox.bash) / [`run_distrobox.bash`](../../../scripts/bash_env/launch/backends/run_distrobox.bash) (host create/enter when executed; ROS/display/macros when sourced from `~/.bashrc`). A create/enter/GPU/image bug is not a dispatcher bug. Adding Distrobox logic to `runtime_dispatch.bash` is the bash analog of patching driver core for hardware-interface policy.
 
 **Hypothesis that would have caught it:**
 
 - Ten kawałek jest od: wyboru runtime i `exec` do backendu.
-- Ten stan ustawia: backend tworzy/wchodzi do kontenera (albo sesja w bashrc kontenera).
-- Moduł który zapisuje: `distrobox_enter.bash` / `container_session.bash` / `platform.bash` — zależnie czy to host, create, czy środowisko w środku.
-- Kandydaci: `runtime_dispatch.bash` — nie, chyba że zły argument lub brakujący `exec`; `distrobox_enter.bash` — tak gdy create/enter; `container_session.bash` — tak gdy ROS/makra po wejściu.
+- Ten stan ustawia: backend tworzy/wchodzi do kontenera (albo sesja gdy ten sam plik jest sourced w bashrc).
+- Moduł który zapisuje: `src/impl_distrobox.bash` / `launch/backends/run_distrobox.bash` / `platform.bash` — zależnie czy to host, create, czy środowisko w środku.
+- Kandydaci: `runtime_dispatch.bash` — nie, chyba że zły argument lub brakujący `exec`; `run_distrobox.bash` / `impl_distrobox.bash` — tak gdy create/enter; sourced ścieżka w `run_distrobox.bash` — tak gdy ROS/makra po wejściu.
 
 **Skill must not:** rewrite `setup.bash`. **Must:** ask which layer failed (host check vs create vs in-container session) before accepting a dispatcher patch.
 

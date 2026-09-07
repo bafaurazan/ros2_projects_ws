@@ -2,11 +2,6 @@
 
 # Usage: cbuild [colcon build args...]
 
-_bundle_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# shellcheck disable=SC1091
-source "${_bundle_dir}/include/helpers_list.bash"
-unset _bundle_dir
-
 cbuild() {
     build::_require_ros_toolchain cbuild || return 1
 

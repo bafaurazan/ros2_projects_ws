@@ -32,7 +32,7 @@ Convention and layout: [scripts/bash_macros/README.md](scripts/bash_macros/READM
 
 ## Layout
 
-- `scripts/` — `bash_bringup`, `bash_container`, `bash_macros` (CLI: `setup.bash`)
+- `scripts/` — `bash_bringup`, `bash_env`, `bash_macros` (CLI: `setup.bash`)
 - `src/` — cloned subprojects (each may have its own `scripts/bash_macros/`, `.cursor/`, `AGENTS.md`)
 - `./build_ws/` — colcon artifacts in the project you build; not a macro cache
 - `.cursor/` — workspace rules and skills (git); subrepos may add their own. Style: `.cursor/rules/cpp/`, `python/naming.mdc`, `bash/naming.mdc`. ROS 2 entry/build (`build`/`cbuild`, Distrobox, `bash_macros/`): [`.cursor/rules/ros2/workspace.mdc`](.cursor/rules/ros2/workspace.mdc). Bundle namespace: [`bash/macros.mdc`](.cursor/rules/bash/macros.mdc).

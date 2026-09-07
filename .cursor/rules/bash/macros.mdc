@@ -1,5 +1,5 @@
 ---
-description: "Bash: namespaced helper bodies in scripts/bash_{macros,bringup,container}"
+description: "Bash: namespaced helper bodies in scripts/bash_{macros,bringup,env}"
 globs: "{scripts/**/*.bash,**/scripts/bash_macros/**}"
 alwaysApply: false
 ---
@@ -8,9 +8,9 @@ alwaysApply: false
 
 Prefixes → [naming.mdc](naming.mdc). Bundle layout: [../../../scripts/bash_macros/README.md](../../../scripts/bash_macros/README.md).
 
-Applies to `scripts/bash_macros/` (`load_macros` bundles) and to `scripts/bash_bringup/` / `scripts/bash_container/` (session bootstrap). Public macros (`build`, `cbuild`, `diag`, `load_macros`, `importer`) — **no** prefix.
+Applies to `scripts/bash_macros/` (`load_macros` bundles) and to `scripts/bash_bringup/` / `scripts/bash_env/` (session bootstrap). Public macros (`build`, `cbuild`, `diag`, `load_macros`, `importer`) — **no** prefix.
 
-Namespaces: `build::` / `diag::` / `load::` / `importer::` / `tr::` / … for macro helpers; `bringup::` and `container::` for bringup/container helpers.
+Namespaces: `build::` / `diag::` / `load::` / `importer::` / `tr::` / … for macro helpers; `bringup::` and `env::` for bringup/env helpers.
 
 Same helper names and completion must work on **Windows/Git Bash** (`./scripts/setup.bash macros`) and **native Linux** (macros or Distrobox). Do not add per-OS naming.
 
@@ -29,9 +29,18 @@ tr::_tr_get_dir() { ... }
 # Good — one name in source and at runtime
 tr::_get_dir() { ... }
 bringup::_is_sourced() { ... }
-container::_init_ros2_env() { ... }
+env::_init_ros2_env() { ... }
 ```
 
 Call helpers as `tr::_get_dir` from public macros and from other helpers. The function name **must not** repeat the bundle name after `::`.
 
 Bash has no private functions. `ns::_…` is a convention: unique across bundles, skipped by `load_macros` collision checks, hidden from TAB. The name stays in the shell.
+
+## Load (launch only)
+
+Each bundle's `launch/macros.bash` is the registry plus **one** `source` of [`lib/bundle_load.bash`](../../../scripts/bash_macros/lib/bundle_load.bash). That file loads `include/*_helpers.bash` then `src/*.bash` for the calling bundle.
+
+- `src/*.bash` **never** sources `include/`.
+- Public macros own the flow. Do not wrap a one-liner `macro() { ns::_build; }`.
+- Add a helper by adding `include/<name>_helpers.bash`. Do not edit launch.
+- Runtime (not helpers): `lib/bundle_load.bash`, `lib/completion.bash` — only in the root bundle.

@@ -3,32 +3,32 @@
 # Optional GUI over SSH: auto-select DISPLAY and XAUTHORITY for local X11 sockets.
 # Disable with: export ROS2_AUTO_LOCAL_DISPLAY=0
 
-container::_is_auto_local_display_enabled() {
+env::_is_auto_local_display_enabled() {
     [[ "${ROS2_AUTO_LOCAL_DISPLAY:-1}" != "0" ]]
 }
 
-container::_has_x11_socket_for_display() {
+env::_has_x11_socket_for_display() {
     local display_candidate="$1"
     local x_socket="/tmp/.X11-unix/X${display_candidate#:}"
     [[ -S "$x_socket" ]]
 }
 
-container::_has_xauthority() {
+env::_has_xauthority() {
     [[ -n "${XAUTHORITY:-}" ]]
 }
 
-container::_has_display() {
+env::_has_display() {
     [[ -n "${DISPLAY:-}" ]]
 }
 
-container::_is_local_display() {
+env::_is_local_display() {
     case "${DISPLAY:-}" in
         :0|:1) return 0 ;;
         *) return 1 ;;
     esac
 }
 
-container::_set_xauthority_from_local_candidates() {
+env::_set_xauthority_from_local_candidates() {
     local cand
     shopt -s nullglob
     for cand in \
@@ -48,23 +48,23 @@ container::_set_xauthority_from_local_candidates() {
     return 1
 }
 
-container::_set_local_display_when_available() {
+env::_set_local_display_when_available() {
     local display_candidate
 
-    container::_is_auto_local_display_enabled || return 0
+    env::_is_auto_local_display_enabled || return 0
 
-    if ! container::_has_display; then
+    if ! env::_has_display; then
         for display_candidate in :0 :1; do
-            if container::_has_x11_socket_for_display "$display_candidate"; then
+            if env::_has_x11_socket_for_display "$display_candidate"; then
                 export DISPLAY="${display_candidate}"
-                container::_has_xauthority || container::_set_xauthority_from_local_candidates || true
+                env::_has_xauthority || env::_set_xauthority_from_local_candidates || true
                 return 0
             fi
         done
         return 0
     fi
 
-    if ! container::_has_xauthority && container::_is_local_display; then
-        container::_set_xauthority_from_local_candidates || true
+    if ! env::_has_xauthority && env::_is_local_display; then
+        env::_set_xauthority_from_local_candidates || true
     fi
 }

@@ -35,7 +35,7 @@ From the workspace root:
 - picks a ROS image (`desktop-full` on x86_64, `ros-base` on arm)
 - installs CycloneDDS RMW, git, pip, USB tools, and related packages in the container
 - uses an isolated home under `.distrobox_<distro>/`
-- hooks `~/.bashrc` to auto-load `scripts/bash_container/src/container_session.bash` (ROS, middleware, macros)
+- hooks `~/.bashrc` to auto-load `scripts/bash_env/launch/backends/run_distrobox.bash` (ROS, middleware, macros)
 
 `macros` opens an interactive bash with workspace macros only (no Distrobox / no ROS). Use this on Git Bash for helpers such as `latex` and `notaura_ws_import_repos`. `exit` returns to the previous shell.
 
@@ -50,7 +50,7 @@ CLI is reserved:
 ./scripts/setup.bash humble prod
 ```
 
-Not implemented yet. Intended for an isolated production image (instead of Distrobox). Runtime engine (Docker or Podman) will be chosen at implementation time — the flag stays `prod`, not `docker` / `podman`. Stub: `scripts/bash_container/src/docker/`.
+Not implemented yet. Intended for an isolated production image (instead of Distrobox). Runtime engine (Docker or Podman) will be chosen at implementation time — the flag stays `prod`, not `docker` / `podman`. Stub: `scripts/bash_env/launch/backends/run_docker.bash` + `src/impl_docker.bash` (same `run_docker.bash` is the in-image session template when sourced).
 
 ## Work inside the container
 
@@ -98,8 +98,8 @@ AGENTS.md               # agent map (git)
 scripts/
   setup.bash            # ./scripts/setup.bash humble|jazzy [prod]|macros
   README.md
-  bash_bringup/         # CLI router + host macros session
-  bash_container/       # Distrobox/Docker runtime + in-container session
+  bash_bringup/         # CLI router → bash_env
+  bash_env/             # macros / Distrobox / Docker runtimes + sessions
   bash_macros/          # launch/macros.bash, src/, include/
 src/                    # subprojects (each may have scripts/bash_macros/, .cursor/, AGENTS.md)
 build_ws/               # per-project colcon artifacts (created in CWD by build/cbuild)

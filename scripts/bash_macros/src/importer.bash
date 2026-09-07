@@ -2,11 +2,6 @@
 
 # Usage: importer <name>
 
-_bundle_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# shellcheck disable=SC1091
-source "${_bundle_dir}/include/helpers_list.bash"
-unset _bundle_dir
-
 importer() {
     local target="${1:-}"
     if [[ -z "$target" ]]; then

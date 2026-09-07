@@ -2,11 +2,6 @@
 
 # Usage: load_macros
 
-_bundle_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# shellcheck disable=SC1091
-source "${_bundle_dir}/include/helpers_list.bash"
-unset _bundle_dir
-
 load_macros() {
     if ! load::_has_workspace_root; then
         echo "load_macros: ROS2_PROJECTS_WS_ROOT is not set" >&2
@@ -73,7 +68,7 @@ load_macros() {
         load::_source_direct_files "${source_dirs[@]}"
     fi
 
-    local completion_file="${root}/scripts/bash_macros/include/completion.bash"
+    local completion_file="${root}/scripts/bash_macros/lib/completion.bash"
     if [[ -f "$completion_file" ]]; then
         # shellcheck disable=SC1090
         source "$completion_file"

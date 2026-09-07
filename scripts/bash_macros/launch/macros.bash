@@ -18,18 +18,5 @@
 #   Usage: importer <name>
 # @macros-end
 
-_bundle_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-
-if [[ -f "${_bundle_dir}/include/helpers_list.bash" ]]; then
-    # shellcheck disable=SC1091
-    source "${_bundle_dir}/include/helpers_list.bash"
-fi
-
-_src_file=
-shopt -s nullglob
-for _src_file in "${_bundle_dir}/src"/*.bash; do
-    # shellcheck disable=SC1090
-    source "$_src_file"
-done
-shopt -u nullglob
-unset _src_file _bundle_dir
+# shellcheck disable=SC1091
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib/bundle_load.bash"
