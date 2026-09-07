@@ -43,7 +43,7 @@ source "${ROS2_PROJECTS_WS_ROOT}/scripts/bash_macros/lib/bundle_load.bash"
 
 Root uses a path relative to this bundle instead of `ROS2_PROJECTS_WS_ROOT`. `lib/bundle_load.bash` finds the caller (`launch/macros.bash`), sources `include/*_helpers.bash`, then `src/*.bash`. `src/*.bash` never sources `include/`. `lib/completion.bash` is not loaded here (bringup / container / `load_macros`).
 
-Public macros in `src/` own the flow (like `tr_pub`). Do not write `macro() { ns::_build "$@"; }`.
+Public macros in `src/` own the flow. Do not write `macro() { ns::_build "$@"; }`.
 
 ### Helpers (optional)
 
@@ -51,11 +51,11 @@ Define helpers as real `ns::_foo` bodies in `include/<api>_helpers.bash`. Call `
 
 To add a helper: put `include/<name>_helpers.bash` in the bundle. Launch does not change — `bundle_load` picks up `*_helpers.bash`. Root known order is `load` → `build` → `importer` → `diag`, then any other `*_helpers.bash`.
 
-Bash has no private functions. `ns::_foo` is still global; the name is unique per bundle (`tr::_get_dir` vs `latex::_get_dir`) and is not a public macro.
+Bash has no private functions. `ns::_foo` is still global; the name is unique per bundle (`foo::_get_dir` vs `bar::_get_dir`) and is not a public macro.
 
 ### TAB completion
 
-After `load_macros`, public macros get a compspec. First-word TAB prefers those names when the prefix matches (`dia` → `diag`, not `diag::*`; `tr_` → `tr_pub` / `tr_sub`, not `tr.exe`). Other first-word completion stays command-like (Windows binaries with `.exe` / `.dll` are dropped).
+After `load_macros`, public macros get a compspec. First-word TAB prefers those names when the prefix matches (`dia` → `diag`, not `diag::*`). Other first-word completion stays command-like (Windows binaries with `.exe` / `.dll` are dropped).
 
 ## Core macros (this folder)
 
@@ -64,9 +64,19 @@ After `load_macros`, public macros get a compspec. First-word TAB prefers those 
 - `diag` — environment checks and the public macro list (from launch registries).
 - `load_macros` — rediscover `scripts/bash_macros/` bundles and re-source `launch/macros.bash`.
 - `importer <name>` — clone a target from `config/importer.repos` on first use; ignores the command if already present. Tries `github.com`, then any `Host` aliases in `~/.ssh/config` whose `HostName` is `github.com` (falls back to `github.com` if that file is missing).
-- `notaura_ws_import_repos` (after `importer notaura_ws`) uses that same host list when cloning from `.repos` files.
 
 Entry: `scripts/bash_macros/launch/macros.bash` (used by `bash_env/launch/backends/run_macros.bash` and in-container/in-image paths of `run_distrobox.bash` / `run_docker.bash`).
+
+## Subproject discovery
+
+The parent workspace does not hardcode which macros live under `src/`. After setup (and after `importer` / `load_macros`):
+
+1. `load_macros` finds every `scripts/bash_macros/` under the workspace root and under `src/` (nested repos included; build/install/log/`.git` trees skipped).
+2. Each bundle’s `launch/macros.bash` registers public macros in the `@macros-begin` … `@macros-end` block and sources root `lib/bundle_load.bash`.
+3. `bundle_load` sources that bundle’s `include/*_helpers.bash` then `src/*.bash`.
+4. `diag` lists public macros grouped by repository (descriptions come from the registry).
+
+Document each subproject’s macros in that repo’s own `README.md` / `scripts/bash_macros/README.md`. Currently configured `importer` targets and agent pointers: [AGENTS.md](../../AGENTS.md).
 
 ## `build_ws`
 

@@ -1,6 +1,6 @@
 # ROS2 Projects Workspace
 
-Ready-to-use ROS 2 environment in a Distrobox container, plus a shared macro system (`build`, `cbuild`, `diag`, `latex`, …) — including macros from repositories under `src/`.
+Ready-to-use ROS 2 environment in a Distrobox container, plus a shared macro system (`build`, `cbuild`, `diag`, `load_macros`, `importer`, …). Subprojects under `src/` can add their own macros; the shell discovers them dynamically.
 
 - **Entry point:** `./scripts/setup.bash <humble|jazzy [prod]|macros>`
 - **Scripts layout:** [scripts/README.md](scripts/README.md)
@@ -37,7 +37,7 @@ From the workspace root:
 - uses an isolated home under `.distrobox_<distro>/`
 - hooks `~/.bashrc` to auto-load `scripts/bash_env/launch/backends/run_distrobox.bash` (ROS, middleware, macros)
 
-`macros` opens an interactive bash with workspace macros only (no Distrobox / no ROS). Use this on Git Bash for helpers such as `latex` and `notaura_ws_import_repos`. `exit` returns to the previous shell.
+`macros` opens an interactive bash with workspace macros only (no Distrobox / no ROS). Use this on Git Bash for host-side helpers from core or imported subprojects. `exit` returns to the previous shell.
 
 Optional: `source scripts/setup.bash macros` loads macros in the current shell instead of opening a new one.
 
@@ -84,11 +84,15 @@ Implementation details: [scripts/bash_macros/README.md](scripts/bash_macros/READ
 
 ## Macros
 
-Convention: each repo keeps `scripts/bash_macros/` with `launch/macros.bash` (descriptions + loader), `src/*.bash` (logic), optional `include/`. After the shell starts, `load_macros` sources those bundles.
+Convention: each repo keeps `scripts/bash_macros/` with `launch/macros.bash` (descriptions + loader), `src/*.bash` (logic), optional `include/`. After the shell starts, `load_macros` sources those bundles in place.
 
-Full documentation: [scripts/bash_macros/README.md](scripts/bash_macros/README.md)
+**Core macros** (this workspace): `build`, `cbuild`, `diag`, `load_macros`, `importer`.
 
-`latex` and `notaura_ws_import_repos` work with `./scripts/setup.bash macros`. ROS `build` / `cbuild` need Distrobox on native Linux. `latex` prefers Docker `texlive/texlive` (on Windows start Docker Desktop first); otherwise host `latexmk` / `pdflatex`.
+**Extensibility:** any repository under `src/` may ship a `scripts/bash_macros/` bundle. `load_macros` discovers and sources it; `diag` lists public macros grouped by repository. Targets for `importer` live in [`scripts/bash_macros/config/importer.repos`](scripts/bash_macros/config/importer.repos). Subproject-specific macros and docs stay in those repos — see [AGENTS.md](AGENTS.md) for currently configured extensions.
+
+ROS `build` / `cbuild` need Distrobox on native Linux. Host helpers from imported subprojects work with `./scripts/setup.bash macros`.
+
+Full documentation: [scripts/bash_macros/README.md](scripts/bash_macros/README.md).
 
 ## Project structure
 

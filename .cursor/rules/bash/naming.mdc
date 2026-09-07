@@ -20,7 +20,7 @@ A prefix describes **behavior type**. Use it when it improves readability; other
 | `set_` | — | write / configure | `set_workspace_root()`, `set_default_middleware()` | `set_path` when it only reads |
 | `try_` | bool | operation that may fail | rare in bash | `try_build` when `build` is always the command |
 
-Private helpers in `scripts/bash_macros/`, `scripts/bash_bringup/`, and `scripts/bash_env/`: `ns::_is_foo` (e.g. `diag::_has_command`, `bringup::_is_sourced`, `env::_init_ros2_env`) — [macros.mdc](macros.mdc). Public commands (`build`, `cbuild`, `diag`, `load_macros`, `importer`) — **no** prefix.
+Private helpers in `scripts/bash_macros/`, `scripts/bash_bringup/`, and `scripts/bash_env/`: `ns::_is_foo` (e.g. `diag::_has_command`, `bringup::_is_sourced`, `env::_init_ros2_env`) — [macros.mdc](macros.mdc). Public commands — core macros (`build`, `cbuild`, `diag`, `load_macros`, `importer`) or any public macro from a subproject bundle — **no** prefix.
 
 ## Abbreviations
 

@@ -16,7 +16,7 @@ From the workspace root:
 
 Script layout: [scripts/README.md](scripts/README.md).
 
-## Macros
+## Core macros
 
 Available after setup. Names must be unique across all `scripts/bash_macros/` bundles.
 
@@ -24,11 +24,30 @@ Available after setup. Names must be unique across all `scripts/bash_macros/` bu
 - `cbuild [colcon args...]` — colcon into `./build_ws/build_<ROS_DISTRO>/`, `install_*`, `log_*`.
 - `diag` — env checks and a live list of public macros (grouped by repo).
 - `load_macros` — rediscover `scripts/bash_macros/` and source `launch/macros.bash` in place (no copy).
-- `importer <name>` — clone a target from `scripts/bash_macros/config/importer.repos` on first use, then `load_macros`. No-op if already present. Tries `github.com`, then SSH aliases for `github.com` from `~/.ssh/config`.
-- `tr_pub [-y|--yes] [-clear] [path ...]` / `tr_sub [-y|--yes] [-clear]` — after `importer transporter`: `tr_pub` copies into `inbox/` as regular files (optional, one or more paths; nested `.git` and `.gitignore` are stripped so copies are not submodules and ignored trees still get committed), commits local changes, then pull+push commits ahead of the remote. `tr_sub` is fetch+pull and fails if the tree is dirty. `-clear` resets history (`tr_pub`: squash + force-push; `tr_sub`: `reset --hard` to remote). `-y` skips collision and `-clear` prompts.
-- `notaura_ws_import_repos [docs|code|vendor|all|status]` — after `importer notaura_ws`. Tries the same GitHub SSH Host list as `importer`.
+- `importer <name>` — clone a target from [`scripts/bash_macros/config/importer.repos`](scripts/bash_macros/config/importer.repos) on first use, then `load_macros`. No-op if already present. Tries `github.com`, then SSH aliases for `github.com` from `~/.ssh/config`.
 
 Convention and layout: [scripts/bash_macros/README.md](scripts/bash_macros/README.md).
+
+## Configured subproject extensions
+
+Targets registered in `importer.repos`. Details and usage live in each subproject; this section is the agent map only.
+
+### transporter
+
+After `importer transporter`:
+
+- `tr_pub [-y|--yes] [-clear] [path ...]` / `tr_sub [-y|--yes] [-clear]` — copy into `inbox/` as regular files (optional paths; nested `.git` / `.gitignore` stripped), commit, then pull+push; `tr_sub` is fetch+pull and fails if dirty. `-clear` resets history; `-y` skips prompts.
+
+Docs: [src/transporter/README.md](src/transporter/README.md), [src/transporter/scripts/bash_macros/README.md](src/transporter/scripts/bash_macros/README.md).
+
+### notaura_ws
+
+After `importer notaura_ws`:
+
+- `notaura_ws_import_repos [docs|code|vendor|all|status]` — clone/update nested repos (same GitHub SSH Host list as `importer`).
+- `latex [path-to.tex|dir]` — after `notaura_ws_import_repos docs` (and `load_macros`); builds under `src/notaura_ws/docs/` (default: thesis `main.tex`) via Docker `texlive/texlive` or host `latexmk` / `pdflatex`.
+
+Docs: [src/notaura_ws/README.md](src/notaura_ws/README.md), [src/notaura_ws/scripts/bash_macros/README.md](src/notaura_ws/scripts/bash_macros/README.md). Nested thesis macros: [src/notaura_ws/docs/notaura_thesis/README.md](src/notaura_ws/docs/notaura_thesis/README.md).
 
 ## Layout
 

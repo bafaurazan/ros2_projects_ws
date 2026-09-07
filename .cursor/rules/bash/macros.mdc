@@ -1,6 +1,6 @@
 ---
 description: "Bash: namespaced helper bodies in scripts/bash_{macros,bringup,env}"
-globs: "{scripts/**/*.bash,**/scripts/bash_macros/**}"
+globs: "{scripts/**/*.bash,scripts/*.bash,**/scripts/bash_macros/**}"
 alwaysApply: false
 ---
 
@@ -8,9 +8,9 @@ alwaysApply: false
 
 Prefixes → [naming.mdc](naming.mdc). Bundle layout: [../../../scripts/bash_macros/README.md](../../../scripts/bash_macros/README.md).
 
-Applies to `scripts/bash_macros/` (`load_macros` bundles) and to `scripts/bash_bringup/` / `scripts/bash_env/` (session bootstrap). Public macros (`build`, `cbuild`, `diag`, `load_macros`, `importer`) — **no** prefix.
+Applies to `scripts/bash_macros/` (`load_macros` bundles) and to `scripts/bash_bringup/` / `scripts/bash_env/` (session bootstrap). Public macros — core (`build`, `cbuild`, `diag`, `load_macros`, `importer`) or any exported by a subproject bundle under `src/` — **no** prefix.
 
-Namespaces: `build::` / `diag::` / `load::` / `importer::` / `tr::` / … for macro helpers; `bringup::` and `env::` for bringup/env helpers.
+Namespaces: `build::` / `diag::` / `load::` / `importer::` for core macro helpers; `bringup::` and `env::` for bringup/env; `<bundle>::` for subproject helpers (short bundle id, e.g. the repo or macro family name).
 
 Same helper names and completion must work on **Windows/Git Bash** (`./scripts/setup.bash macros`) and **native Linux** (macros or Distrobox). Do not add per-OS naming.
 
