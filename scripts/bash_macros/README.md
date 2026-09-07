@@ -1,0 +1,84 @@
+# Workspace macros
+
+Each repository keeps a `scripts/bash_macros/` bundle. The shell (`./scripts/setup.bash humble|jazzy|macros`) discovers those folders and sources public APIs **in place** (no copy, no cache).
+
+## Bundle layout
+
+```text
+<repo>/scripts/bash_macros/
+  README.md
+  launch/macros.bash     # @macros registry + source lib/bundle_load.bash
+  src/                   # function implementations
+    my_macro.bash
+  include/               # optional namespaced helpers (ns::_foo)
+  lib/                   # runtime only in root bundle (bundle_load, completion)
+  config/                # optional data (e.g. importer.repos)
+```
+
+`<repo>` is the directory immediately above `scripts/` (root workspace or `src/<repo>/`). Root workspace also has `lib/` for bundle loader and TAB completion. Subrepos do not copy `lib/`.
+
+Function names must be unique across all repos. `load_macros` aborts on collisions of **public** macros. Names starting with `_` or containing `::` are not public macros. Prefix and namespace conventions: [`.cursor/rules/bash/naming.mdc`](../../.cursor/rules/bash/naming.mdc), [`.cursor/rules/bash/macros.mdc`](../../.cursor/rules/bash/macros.mdc).
+
+The same helper names and TAB completion must work on Windows/Git Bash and native Linux.
+
+### `launch/macros.bash` registry
+
+User-facing descriptions live only in the `@macros-begin` … `@macros-end` block. `diag` groups macros by repo and wraps those descriptions.
+
+```bash
+# @macros-begin
+# macro my_macro
+#   One or more comment lines of description.
+# @macros-end
+```
+
+Do not copy root `src/load_macros.bash` into a subrepo. Root `launch/macros.bash` lists `load_macros` in the registry; subrepos do not.
+
+After the `@macros-end` block, `launch/macros.bash` has one load line:
+
+```bash
+# shellcheck disable=SC1091
+source "${ROS2_PROJECTS_WS_ROOT}/scripts/bash_macros/lib/bundle_load.bash"
+```
+
+Root uses a path relative to this bundle instead of `ROS2_PROJECTS_WS_ROOT`. `lib/bundle_load.bash` finds the caller (`launch/macros.bash`), sources `include/*_helpers.bash`, then `src/*.bash`. `src/*.bash` never sources `include/`. `lib/completion.bash` is not loaded here (bringup / container / `load_macros`).
+
+Public macros in `src/` own the flow. Do not write `macro() { ns::_build "$@"; }`.
+
+### Helpers (optional)
+
+Define helpers as real `ns::_foo` bodies in `include/<api>_helpers.bash`. Call `ns::_foo` from `src/*.bash` and from other helpers. Do not leave a short global `_foo`.
+
+To add a helper: put `include/<name>_helpers.bash` in the bundle. Launch does not change — `bundle_load` picks up `*_helpers.bash`. Root known order is `load` → `build` → `importer` → `diag`, then any other `*_helpers.bash`.
+
+Bash has no private functions. `ns::_foo` is still global; the name is unique per bundle (`foo::_get_dir` vs `bar::_get_dir`) and is not a public macro.
+
+### TAB completion
+
+After `load_macros`, public macros get a compspec. First-word TAB prefers those names when the prefix matches (`dia` → `diag`, not `diag::*`). Other first-word completion stays command-like (Windows binaries with `.exe` / `.dll` are dropped).
+
+## Core macros (this folder)
+
+- `build [colcon args...]` — rosdep / apt / pip, then `cbuild`. Requires ROS 2 toolchain (Distrobox on native Linux).
+- `cbuild [colcon args...]` — rediscovers macros (`load_macros`), then `colcon build` into `./build_ws/`, then source the install overlay (skipped if colcon fails).
+- `diag` — environment checks and the public macro list (from launch registries).
+- `load_macros` — rediscover `scripts/bash_macros/` bundles and re-source `launch/macros.bash`.
+- `importer <name>` — clone a target from `config/importer.repos` on first use; ignores the command if already present. Tries `github.com`, then any `Host` aliases in `~/.ssh/config` whose `HostName` is `github.com` (falls back to `github.com` if that file is missing).
+- `git_ws <path> [path ...]` — recursively discover git repos under the given paths (skips `build` / `build_ws` / `install` / `log` / `trash`), `git fetch --prune`, report `ok` / `pull` / `push` / `manual`, then one `y/N` to apply safe `pull --ff-only` / `push` when any exist.
+
+Entry: `scripts/bash_macros/launch/macros.bash` (used by `bash_env/launch/backends/run_macros.bash` and in-container/in-image paths of `run_distrobox.bash` / `run_docker.bash`).
+
+## Subproject discovery
+
+The parent workspace does not hardcode which macros live under `src/`. After setup (and after `importer` / `load_macros`):
+
+1. `load_macros` finds every `scripts/bash_macros/` under the workspace root and under `src/` (nested repos included; build/install/log/`.git` trees skipped).
+2. Each bundle’s `launch/macros.bash` registers public macros in the `@macros-begin` … `@macros-end` block and sources root `lib/bundle_load.bash`.
+3. `bundle_load` sources that bundle’s `include/*_helpers.bash` then `src/*.bash`.
+4. `diag` lists public macros grouped by repository (descriptions come from the registry).
+
+Document each subproject’s macros in that repo’s own `README.md` / `scripts/bash_macros/README.md`. Currently configured `importer` targets and agent pointers: [AGENTS.md](../../AGENTS.md).
+
+## `build_ws`
+
+`./build_ws/` in the project you build holds colcon artifacts only (`build_*`, `install_*`, `log_*`). Macros are not stored there.

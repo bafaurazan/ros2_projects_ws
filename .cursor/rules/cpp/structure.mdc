@@ -1,0 +1,149 @@
+---
+description: "C++: header vs cpp, constants, methods, state enum class, readability"
+globs: "**/*.{hpp,cpp,h}"
+alwaysApply: false
+---
+
+# C++ structure
+
+Naming → [naming.mdc](naming.mdc). Python: [../python/naming.mdc](../python/naming.mdc). Bash: [../bash/naming.mdc](../bash/naming.mdc).
+
+Conventions for code with state machines and a hardware/control layer. Applies to **new code** — do not refactor legacy unless asked.
+
+## Header (.hpp) vs source (.cpp)
+
+| What | Where |
+|------|-------|
+| Method declarations, shared constants, small helpers | `.hpp` (or `*_helpers.hpp`) |
+| `#include` required by declarations in the header | `.hpp`, not only `.cpp` |
+| Data structs used by the class | outside the class, in the same `.hpp` |
+| Method implementations | `.cpp` |
+| Constants **only for this translation unit** | `static constexpr` in `.cpp` |
+
+Avoid an anonymous namespace in `.cpp` for helpers/constants that may be needed in another file — that hides API.
+
+## Class layout — fields before methods
+
+Within each access section (`public` / `protected` / `private`), member variables first, then methods. Do not insert a helper above the fields of that section.
+
+```cpp
+private:
+    bool active_{false};
+    std::mutex mutex_;
+
+    void CleanupAndResetState();
+```
+
+Bad: a private method, then the fields it uses. Applies to **new** members — do not reshuffle a whole legacy class unless asked.
+
+## Constants
+
+- Format: `k_snake_case` (e.g. `k_mode_confirmation_timeout_ms`).
+- Shared → `inline constexpr` or `static constexpr` in `.hpp`.
+- Private to one `.cpp` → `static constexpr` at the top of the file.
+- Prefer `static constexpr` over `#define`.
+
+## Methods instead of monoliths
+
+Extract **private methods** when the main handling loop has more than one responsibility, or the same condition is repeated — **one gate high**.
+
+```cpp
+void ProcessTick(...) {
+    const ConnectionState current_state = ...;  // snapshot at the start
+    if (!IsReady(current_state)) { ...; return; }
+    if (output_enabled) {
+        WritePrimaryCommands();
+        WriteSecondaryCommands();
+    } else {
+        ZeroReleasedOutputs();
+    }
+}
+```
+
+Keep getters/setters in one block, with no logic between them. Reuse existing module API before writing your own loop (e.g. `IsErrorActive()` from a shared library).
+
+Do **not** extract a private method that is short and called from exactly one place — inline it. Same bar as one-use locals.
+
+```cpp
+// Bad — extra name, one call site
+void FlushFrameQueue() { /* pop until empty */ }
+void StartWorker() {
+    FlushFrameQueue();
+    running_.store(true);
+}
+
+// Good
+void StartWorker() {
+    {
+        std::lock_guard<std::mutex> lock(queue_mutex_);
+        while (!queue_.empty())
+            queue_.pop();
+    }
+    running_.store(true);
+}
+```
+
+Extract when the same body has (or will have) a second call site, the helper is virtual, or the extracted name documents a non-obvious invariant that the inlined block would hide.
+
+## Variables — only when they earn their keep
+
+Do not introduce a local used **exactly once** — inline the expression.
+
+```cpp
+// Bad — noise
+const auto name = "session_" + storage.prefix;
+set_flag(name + "/error", true);
+
+// Good
+set_flag("session_" + storage.prefix + "/error", true);
+```
+
+Exceptions: a **snapshot** used more than once in the same function (`current_state`); a complex expression where the name helps; a copy under a mutex before releasing the lock.
+
+## State machines — `enum class`, not a set of flags
+
+When an object moves through states (lifecycle, connection, activation), model that as one enum — pattern: `ConnectionState` + `ConnectionStateToString()`.
+
+```cpp
+enum class ConnectionState
+{
+    DISCONNECTED,
+    CONNECTING,  // comment when the state is not obvious
+    ACTIVE,
+    FAULT,
+};
+
+inline const char* ConnectionStateToString(ConnectionState s)
+{
+    switch (s) {
+    case ConnectionState::DISCONNECTED: return "DISCONNECTED";
+    // ...
+    }
+    return "UNKNOWN";
+}
+
+std::atomic<ConnectionState> connection_state_{ConnectionState::DISCONNECTED};
+```
+
+- One `enum class` per state axis; one field — do not use a pair of bools if they can be merged.
+- Values: `SCREAMING_SNAKE`, short. `FooToString`: `inline const char*` next to the enum in `.hpp`.
+- Logic: `switch (stage)` / `if (stage == ConnectionState::X)` instead of `if (is_a && !is_b && is_c)`.
+
+Exception: separate bools only when they describe **independent** facts (`enable_requested_` vs `connection_active_`), not successive steps of the same machine.
+
+## Readability
+
+- Blank line between logical blocks and **before** a comment.
+- Technical comments: precise (e.g. “output FET off”, not a vague “power off”).
+- TODO: one line + issue number. Example: `// TODO(#123): re-handshake after failed Activate`.
+- Logs: do not duplicate — if a helper already logs, do not add a second framework-logger call.
+
+## Shared state across threads
+
+- Snapshot at the start of the main handling loop: `const ConnectionState current_state = connection_state_.load()` under the mutex.
+- Shared flags: `std::atomic` or mutex plus a comment why.
+- When adding a thread: consider mutex/CV and document ordering assumptions — details in the MR/issue.
+
+## Exclusions
+
+Do not change framework API or virtual overrides without need. Product decisions belong in an issue/MR, not this rule.

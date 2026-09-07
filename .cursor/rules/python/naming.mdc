@@ -1,0 +1,30 @@
+---
+description: "Python: is/has/get/set prefixes (PEP 8)"
+globs: "**/*.py"
+alwaysApply: false
+---
+
+# Python naming
+
+Prefix semantics match [../cpp/naming.mdc](../cpp/naming.mdc) (same logic, PEP 8 spelling). Bash: [../bash/naming.mdc](../bash/naming.mdc).
+
+A prefix describes **behavior type**. Applies to **new code**.
+
+| Prefix | Meaning | Example |
+|--------|---------|---------|
+| `is_` | bool state | `is_active`, `is_configured()` |
+| `has_` | existence / availability | `has_permission`, `has_config()` |
+| `get_` | read with no state change | `get_config_path()` |
+| `set_` | write / configure | `set_parameters()` |
+| `try_` | failure is a normal path | `try_connect()` |
+
+Actions and transforms — **no** prefix: `activate()`, `parse_config()`, `build()`. Fields: `self._foo_active` (no `is_` on the member, same as C++).
+
+Keep names short, but spell out words a reader would have to expand (`get_terminal_width`, not `get_term_width`). Established acronyms are fine.
+
+Bool names must state a **concrete fact**, not a vague grade:
+- Good: `all_motors_activated`, `steering_activated`, `all_bms_activated`, `all_brakes_activated`
+- Bad: `ok`, `all_ok`, `motors_ok`, `success`, `status_ok`
+- Use `any_*` only when the bool truly means “at least one”
+
+Do not change framework APIs or names required by a base class / plugin.
