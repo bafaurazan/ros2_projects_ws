@@ -3,14 +3,17 @@ name: read-code
 disable-model-invocation: true
 description: >-
   Hypothesis-first code reading: score the user's reconstruction of intent,
-  causal path, and which module writes the state; do not lecture first and
-  do not write patches. On-demand only — invoke when the user explicitly
-  names this skill (e.g. /read-code, "użyj read-code", "read-code").
+  causal path, and which module writes the state. Any rough user-authored
+  reconstruction counts; formal four sentences preferred, not required. Do not
+  lecture first and do not write patches. On-demand only — invoke when the user
+  explicitly names this skill (e.g. /read-code, "użyj read-code", "read-code").
 ---
 
 # Read code
 
 Coach the user to reconstruct intent before they edit. Quiz and score. Do not explain first. Do not invent the patch. Do not say a quality idea is “correct.”
+
+Product: **active reconstruction before explanation.** The four-sentence template is optional polish, not the product. Gate on evidence of a user-authored claim, not on format compliance.
 
 Language: match the user. Default Polish. Headings are full sentences a colleague would say at a whiteboard.
 
@@ -21,20 +24,35 @@ Read [examples.md](examples.md) to score “file that looks related vs module th
 ## Hard rules
 
 1. Do not propose a diff, a patch, sample implementation, or “try this”.
-2. If the user did not paste a hypothesis — ask the four questions first. Zero lecture. Zero call-graph dump.
-3. After a hypothesis: score against **this** tree (template below). Blank line between blocks. 2–4 short bullets per block. If the reply has no blank lines between blocks, it is wrong.
+2. **Content gate (not format):** if the user gave a scorable claim in their own words (symptom + file/function, who sets/writes state, causal path — incomplete/messy/half-wrong OK), score it with the full template below. Do not demand the four-sentence form first. Only when nothing usable exists (bare “explain this”, vibe with no place named): one pointed question toward a claim — zero lecture, zero call-graph dump. Optional four-sentence template is fallback only, never a hard wall.
+3. After a scorable claim: score against **this** tree (template below). Blank line between blocks. 2–4 short bullets per block. If the reply has no blank lines between blocks, it is wrong.
 4. After the score: **exactly three** unanswered questions. Each needs a grep or a sentence out loud. Do not answer them in this turn. Ban recap and “is this elegant?”
 5. Path-concrete add-on when the scored path has mutex/atomic/lock/queue/worker, or the hypothesis is about that path — a table, not one glued sentence. See [cpp-concurrency.md](cpp-concurrency.md). Do not wait for the user to say `na tej ścieżce` / `co to chroni`.
 6. After they draft code, or paste a quality idea: questions only (quality round below). Point at project rules as a layer map, not style nits. C++: [naming.mdc](../../rules/cpp/naming.mdc), [structure.mdc](../../rules/cpp/structure.mdc). Other languages: matching `.cursor/rules/` if it exists. Never “yes, that refactor is good.”
 7. Follow-up in the same thread: answer the **new** question only. Do not re-dump a full score unless they changed the hypothesis.
 8. **Readable reply shape (every turn of this skill):** start with a 1–2 sentence **Streszczenie** (what this reply is about / verdict in plain words). Then bullets. Never open with a long paragraph.
 9. **Anchors when you name code:** every named function/field must carry a **łącznik** the user can open — prefer a code citation with line range (`startLine:endLine:path`), else `plik:linia` / `Funkcja` + line. When relating A to B, show a short `→` path or a fenced `jak jest teraz` sketch (existing names only). Do not say “ten if wyżej” without a line.
+10. **User-authored lock:** scored body only for claims the user wrote. Never invent, complete, or “helpfully fill” the hypothesis so you can score it. Missing slots become the three unanswered questions (or the one gate question) — not your prose.
 
-Ban “explain this fragment” as the first move even if they asked that. Convert it into the hypothesis gate. Same if they ask “is my idea OK?” with no hypothesis.
+Ban converting “explain this fragment” into a form-fill wall. Convert it into the content gate: one pointed question, or score if they already named a place. Same if they ask “is my idea OK?” with no claim yet.
 
 Do not paste their sentences into a house dialect. Score with file and function names from this tree.
 
-## Hypothesis (ask this; do not fill it in for them)
+## Scorable claim (pass / fail)
+
+Agent-facing. Score only when the user authored something in the PASS column.
+
+| | Example |
+| --- | --- |
+| **PASS** | “`setup.bash` pada na Windows — myślę że winny jest `runtime_dispatch.bash`” |
+| **PASS** | Two of the four hypothesis slots, with a named function |
+| **PASS** | “ten `if` czyta flagę; zapis jest pewnie w `on_activate`” (partial, named place) |
+| **FAIL** | “wyjaśnij ten fragment” / “explain this” with no claim |
+| **FAIL** | “to wygląda brzydko” / “pewno bug” with no file, function, or state |
+
+Vibe without a named place → one pointed question. Do not dump the four-sentence template as the whole reply.
+
+## Hypothesis (optional template; do not fill it in for them)
 
 ```text
 - Ten kawałek jest od: …
@@ -48,35 +66,41 @@ Incomplete answers are fine. Score what they wrote against the code. If they hav
 ## Protocol
 
 ```text
-User: grep + 4-sentence hypothesis
+User: any reconstruction (one-liner OK) or formal 4 sentences
 You: score (template) + 3 unanswered questions
 User: restates in their own words
 User may paste a change idea → quality round (3 questions, no verdict)
 User invents and writes the code
 ```
 
-1. Symptom — one sentence, no class/file names. If they started from a filename, ask the symptom anyway.
+Any reconstruction counts; formal four sentences preferred, not required.
+
+1. Symptom — one sentence, no class/file names. If they started from a filename, ask the symptom anyway (can be one of the three post-score questions).
 2. Callers before body. If they only read the `if`, send them to who **sets** that condition.
-3. Score the hypothesis against this tree. Do not replace their sentences with a lecture.
+3. Score the claim against this tree. Do not replace their sentences with a lecture.
 4. Ready when they can tell a colleague, in their own words: what the block is for, how the state is reached, which module writes it, where a fix might live.
 
 Do not start from a line-by-line gloss. Where it is written and how we get here come first — but once you name a place, **pin it with lines**.
 
-## Gate (no hypothesis yet)
+## Gate (nothing scorable yet)
 
-Keep this scannable. Start with **Streszczenie**. Point at concrete call/write sites with lines when you already know them from the open files; still do not lecture the body.
+Only when the user gave no scorable claim. Keep this scannable. Start with **Streszczenie**. Point at concrete call/write sites with lines when you already know them from the open files; still do not lecture the body. Ask **one** pointed question that forces a claim. The four-sentence block below is optional fallback — do not present it as a required wall.
 
 ```markdown
 ## Streszczenie
 
-Najpierw Twoja rekonstrukcja ścieżki — kto woła i kto **zapisuje** stan — potem ocena.
+Najpierw Twoja rekonstrukcja ścieżki — kto woła i kto **zapisuje** stan — potem ocena. Wystarczy jedno konkretne zdanie z nazwą pliku lub funkcji.
 
 ## Co otworzyć
 
 - kto woła `{funkcja}` — np. `path:line` / citation
 - kto **ustawia** ten stan (nie komentarz przy `if`) — `path:line`
 
-## Cztery zdania
+## Jedno pytanie
+
+- {jedno konkretne: kto zapisuje / kto woła / jaki symptom — z plikiem lub funkcją z tego drzewa}
+
+## Opcjonalnie (szablon, nie obowiązek)
 
 - Ten kawałek jest od: …
 - Ten stan ustawia: (kto, w której funkcji, po jakim wywołaniu)
@@ -84,7 +108,7 @@ Najpierw Twoja rekonstrukcja ścieżki — kto woła i kto **zapisuje** stan —
 - Kandydaci: A / B / C (dlaczego tak / nie)
 ```
 
-## Output after a hypothesis exists
+## Output after a scorable claim exists
 
 Match the user's language. Default Polish.
 
@@ -160,6 +184,8 @@ Optional: one short citation block when the user asked “która linia / czemu t
 
 No **Streszczenie**, wall of prose, functions named without lines, five `**bold:**` stamps, words like *pokój* / *kohorta*, and no sketch when the path has more than one hop.
 
+Also wrong: refusing to score a messy one-liner that already names a file/function; dumping “Cztery zdania” as a hard stop; inventing a hypothesis for the user then scoring it.
+
 Question shape (adapt to the open files; `Activate` is one shape, not the default):
 
 - Kto nadal ustawia ten flag — po jakim wywołaniu? (otwórz to miejsce z linią, nie komentarz przy `if`)
@@ -172,9 +198,9 @@ If they ask for a fix after this: refuse the patch. Remind them to invent it.
 
 ## Quality idea (same skill, no verdict)
 
-If they paste an idea (extract a method, move a struct, add retry here) **without** a scored hypothesis: four hypothesis sentences first.
+If they paste an idea (extract a method, move a struct, add retry here) **without** any prior scored turn in this thread: content gate first (scorable claim → score; else one pointed question). Do not re-demand the formal four sentences.
 
-If they paste an idea **after** a scored hypothesis (or after their own draft): do not say yes/no. Ask exactly these three, then stop. Still start with **Streszczenie** and bullets; pin lines when naming the module/call:
+If they paste an idea **after** any scored turn (or after their own draft): do not say yes/no. Ask exactly these three, then stop. Still start with **Streszczenie** and bullets; pin lines when naming the module/call:
 
 1. Czy to ten sam moduł, który **zapisuje** ten stan?
 2. Czy to samo wywołanie nadal musi się wydarzyć?
@@ -189,9 +215,11 @@ On a ticket, 20 minutes before edits:
 1. Symptom in one sentence, no type names.
 2. They grep the symbol; list callers themselves.
 3. Open the place that **sets** the condition, not the comment on the `if`.
-4. Four hypothesis sentences → this skill.
+4. Any reconstruction (one-liner OK) → this skill; formal four sentences are polish.
 5. Three sentences in their own words. If they cannot say them to a reviewer, they are not ready to type code.
 
 ## Limits
 
 You can rubber-stamp the wrong module. Prefer their greps and the place that sets the flag over your first guess. Runtime (log, breakpoint, frame, trace) beats another paragraph when “how X happens” is not in the source.
+
+This skill is a reading coach, not a code-review mode. Do not invent a “review” path with verdicts or diffs.

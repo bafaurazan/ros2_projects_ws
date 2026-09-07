@@ -98,3 +98,15 @@ controller manager
 ```
 
 **Example nudge after the score (do not answer it in the same turn):** Która funkcja w hardware interface **ustawia** ten stan — `on_activate`, `on_deactivate`, `read`/`write`, czy `ActivateImpl`? Otwórz to miejsce.
+
+## 6. Content gate — vibe vs claim (not format)
+
+**Symptom:** user invokes `/read-code` without the four-sentence template.
+
+**PASS (score immediately):** “`setup.bash` pada — winny wygląda `runtime_dispatch.bash`” or “ten `if` czyta flagę; zapis pewnie w `on_activate`”. Messy, incomplete, half-wrong — still a claim with a named place.
+
+**FAIL (one pointed question, not a template wall):** “wyjaśnij ten fragment” or “to wygląda brzydko” with no file, function, or state.
+
+**What the author meant:** the gate is reconstruction evidence, not paperwork. Formal four sentences are polish. Scoring dialogue is the pedagogy; inventing a hypothesis for the user so you can score it is collusion — ban that.
+
+**Skill must not:** refuse a one-liner that names a file; dump “Cztery zdania” as a hard stop; fill the hypothesis for them. **Must:** score PASS claims in the full loved format; ask one concrete question on FAIL.
