@@ -99,14 +99,16 @@ controller manager
 
 **Example nudge after the score (do not answer it in the same turn):** Która funkcja w hardware interface **ustawia** ten stan — `on_activate`, `on_deactivate`, `read`/`write`, czy `ActivateImpl`? Otwórz to miejsce.
 
-## 6. Content gate — vibe vs claim (not format)
+## 6. Map vs Score vs gate (not format)
 
-**Symptom:** user invokes `/read-code` without the four-sentence template.
+**Symptom:** user invokes `/read-code` without a formal hypothesis.
 
-**PASS (score immediately):** “`setup.bash` pada — winny wygląda `runtime_dispatch.bash`” or “ten `if` czyta flagę; zapis pewnie w `on_activate`”. Messy, incomplete, half-wrong — still a claim with a named place.
+**Map (open files / named topic + „wytłumacz / jak działa / czy OK”):** deliver the Map template — write vs read sites, `jak jest teraz`, soft questions. **Do not** reply with only “najpierw Twoja rekonstrukcja” + one question.
 
-**FAIL (one pointed question, not a template wall):** “wyjaśnij ten fragment” or “to wygląda brzydko” with no file, function, or state.
+**Score (claim with a named place):** “`setup.bash` pada — winny wygląda `runtime_dispatch.bash`” or “ten `if` czyta flagę; zapis pewnie w `on_activate`”. Messy OK — score in the Score template.
 
-**What the author meant:** the gate is reconstruction evidence, not paperwork. Formal four sentences are polish. Scoring dialogue is the pedagogy; inventing a hypothesis for the user so you can score it is collusion — ban that.
+**Gate (one pointed question only):** vibe with **zero** anchors — no open file, no named function, no topic in the thread.
 
-**Skill must not:** refuse a one-liner that names a file; dump “Cztery zdania” as a hard stop; fill the hypothesis for them. **Must:** score PASS claims in the full loved format; ask one concrete question on FAIL.
+**What the author meant:** coaching still prefers their reconstruction when they have one; explain requests must get a real map. Inventing a hypothesis for them so you can “score” it is still banned.
+
+**Skill must not:** block explain with a form wall; refuse a one-liner that names a file; fill the hypothesis for them. **Must:** Map on explain+anchors; Score on PASS claims; one gate question only when there is nothing to open.
