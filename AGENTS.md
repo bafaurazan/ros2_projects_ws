@@ -25,7 +25,7 @@ Available after setup. Names must be unique across all `scripts/bash_macros/` bu
 - `diag` — env checks and a live list of public macros (grouped by repo).
 - `load_macros` — rediscover `scripts/bash_macros/` and source `launch/macros.bash` in place (no copy).
 - `importer <name>` — clone a target from [`scripts/bash_macros/config/importer.repos`](scripts/bash_macros/config/importer.repos) on first use, then `load_macros`. No-op if already present. Tries `github.com`, then SSH aliases for `github.com` from `~/.ssh/config`.
-- `git_ws <path> [path ...]` — recursively discover nested git repos under paths, fetch, report `ok`/`pull`/`push`/`manual`, optional shared `y/N` for safe pull/push.
+- `git_ws <path> [path ...]` — recursively discover nested git repos under paths, fetch, report `ok`/`info`/`pull`/`push`/`manual` (`info` when fetch reported changes but the current branch is in sync), optional shared `y/N` for safe pull/push.
 
 Convention and layout: [scripts/bash_macros/README.md](scripts/bash_macros/README.md).
 

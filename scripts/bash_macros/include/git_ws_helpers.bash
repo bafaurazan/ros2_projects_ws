@@ -93,9 +93,11 @@ git_ws::_is_dirty() {
     [[ -n "$(git -C "$dir" status --porcelain 2>/dev/null)" ]]
 }
 
-# Sets: _gw_branch _gw_upstream _gw_ahead _gw_behind _gw_action _gw_reason _gw_fetch_ok
+# Sets: _gw_branch _gw_upstream _gw_ahead _gw_behind _gw_action _gw_reason
+#        _gw_fetch_ok _gw_fetch_out
 git_ws::_classify() {
     local dir="$1"
+    local fetch_status=0
     _gw_branch=""
     _gw_upstream=""
     _gw_ahead=0
@@ -103,8 +105,11 @@ git_ws::_classify() {
     _gw_action="manual"
     _gw_reason=""
     _gw_fetch_ok=0
+    _gw_fetch_out=""
 
-    if ! git -C "$dir" fetch --prune >/dev/null 2>&1; then
+    _gw_fetch_out="$(git -C "$dir" fetch --prune --no-progress 2>&1)"
+    fetch_status=$?
+    if [[ "$fetch_status" -ne 0 ]]; then
         _gw_reason="fetch failed"
         _gw_branch="$(git -C "$dir" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")"
         return 0
@@ -148,8 +153,21 @@ git_ws::_classify() {
         return 0
     fi
 
-    _gw_action="ok"
+    if [[ -n "$_gw_fetch_out" ]]; then
+        _gw_action="info"
+    else
+        _gw_action="ok"
+    fi
     _gw_reason=""
+}
+
+git_ws::_print_fetch_out() {
+    local fetch_out="$1"
+    local line
+    [[ -n "$fetch_out" ]] || return 0
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        printf '  %s\n' "$line"
+    done <<< "$fetch_out"
 }
 
 git_ws::_print_repo_line() {

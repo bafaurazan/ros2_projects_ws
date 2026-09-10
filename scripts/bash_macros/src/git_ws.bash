@@ -36,6 +36,7 @@ git_ws() {
         git_ws::_print_repo_line \
             "$display" "$_gw_branch" "$_gw_upstream" \
             "$_gw_ahead" "$_gw_behind" "$_gw_action" "$_gw_reason"
+        git_ws::_print_fetch_out "$_gw_fetch_out"
 
         if [[ "$_gw_action" == "pull" || "$_gw_action" == "push" ]]; then
             apply_dirs+=("$dir")
