@@ -6,7 +6,7 @@ alwaysApply: false
 
 # C++ naming
 
-Layout → [structure.mdc](structure.mdc). Python: [../python/naming.mdc](../python/naming.mdc). Bash: [../bash/naming.mdc](../bash/naming.mdc).
+Layout → [structure.mdc](structure.mdc). Doxygen → [doxygen.mdc](doxygen.mdc). Python: [../python/naming.mdc](../python/naming.mdc). Bash: [../bash/naming.mdc](../bash/naming.mdc).
 
 A prefix describes **behavior type**, not decoration. Applies to **new code** — do not refactor legacy unless asked.
 

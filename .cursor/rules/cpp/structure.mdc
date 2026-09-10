@@ -6,9 +6,18 @@ alwaysApply: false
 
 # C++ structure
 
-Naming → [naming.mdc](naming.mdc). Python: [../python/naming.mdc](../python/naming.mdc). Bash: [../bash/naming.mdc](../bash/naming.mdc).
+Naming → [naming.mdc](naming.mdc). Doxygen → [doxygen.mdc](doxygen.mdc). Python: [../python/naming.mdc](../python/naming.mdc). Bash: [../bash/naming.mdc](../bash/naming.mdc).
 
 Conventions for code with state machines and a hardware/control layer. Applies to **new code** — do not refactor legacy unless asked.
+
+## Formatting / baseline
+
+- Identifiers and comments in **English**.
+- Indent with **4 spaces** (no tabs).
+- Opening `{` on its **own line** (Allman), matching husarz drivers.
+- Headers: `#pragma once`.
+- Filenames `.hpp` / `.cpp`: `snake_case`. When creating a package: headers under `include/`, sources under `src/`.
+- Prefer **C++17** unless the package already pins another standard.
 
 ## Header (.hpp) vs source (.cpp)
 
@@ -134,6 +143,7 @@ Exception: separate bools only when they describe **independent** facts (`enable
 ## Readability
 
 - Blank line between logical blocks and **before** a comment.
+- Larger API / contract comments → [doxygen.mdc](doxygen.mdc). Short local “why” → plain `//`.
 - Technical comments: precise (e.g. “output FET off”, not a vague “power off”).
 - TODO: one line + issue number. Example: `// TODO(#123): re-handshake after failed Activate`.
 - Logs: do not duplicate — if a helper already logs, do not add a second framework-logger call.
