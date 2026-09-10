@@ -6,8 +6,38 @@ git_ws::_usage() {
     echo "Usage: git_ws <path> [path ...]" >&2
     echo "  Discover git repos under the given paths, fetch, report status," >&2
     echo "  and optionally apply safe pull/push." >&2
+    echo "  Always also checks the ros2_projects_ws repo (ROS2_PROJECTS_WS_ROOT)." >&2
     echo "  Example: git_ws .   # all nested repos under workspace root" >&2
     echo "           git_ws src/notaura_ws/docs src/notaura_ws/src" >&2
+}
+
+# Print canonical toplevel of the meta-workspace git repo, or fail.
+git_ws::_get_workspace_repo() {
+    local root="${ROS2_PROJECTS_WS_ROOT:-}"
+    if [[ -z "$root" ]]; then
+        echo "git_ws: ROS2_PROJECTS_WS_ROOT is not set" >&2
+        return 1
+    fi
+    if [[ ! -e "$root" ]]; then
+        echo "git_ws: workspace root not found: ${root}" >&2
+        return 1
+    fi
+
+    local abs toplevel top_norm
+    abs="$(git_ws::_canonicalize "$root")" || {
+        echo "git_ws: cannot resolve workspace root: ${root}" >&2
+        return 1
+    }
+    if ! git_ws::_is_git_dir "$abs"; then
+        echo "git_ws: workspace root is not a git repo: ${abs}" >&2
+        return 1
+    fi
+    toplevel="$(git -C "$abs" rev-parse --show-toplevel 2>/dev/null)" || {
+        echo "git_ws: not a usable git repo: ${abs}" >&2
+        return 1
+    }
+    top_norm="$(git_ws::_canonicalize "$toplevel" || printf '%s\n' "$toplevel")"
+    printf '%s\n' "$top_norm"
 }
 
 git_ws::_canonicalize() {

@@ -10,17 +10,18 @@ git_ws() {
 
     git_ws::_require_paths "$@" || return 1
 
-    local -a repos=()
+    local ws_repo
+    ws_repo="$(git_ws::_get_workspace_repo)" || return 1
+
+    # Meta-workspace first; user paths next (dedupe if root already listed).
+    local -a repos=("$ws_repo")
     local line
     while IFS= read -r line; do
         [[ -n "$line" ]] || continue
-        repos+=("$line")
+        if [[ "$line" != "$ws_repo" ]]; then
+            repos+=("$line")
+        fi
     done < <(git_ws::_find_repos "$@")
-
-    if [[ "${#repos[@]}" -eq 0 ]]; then
-        echo "git_ws: no git repositories found under: $*" >&2
-        return 1
-    fi
 
     echo "Found ${#repos[@]} repo(s). Fetching..."
     echo

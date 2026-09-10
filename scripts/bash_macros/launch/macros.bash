@@ -18,9 +18,10 @@
 #   Usage: importer <name>
 # macro git_ws
 #   Discover git repos under given paths recursively (skips
-#   build/build_ws/install/log/trash). git fetch --prune, report
-#   ok/pull/push/manual, then one y/N to apply safe pull --ff-only / push.
-#   Paths required. Usage: git_ws <path> [path ...]
+#   build/build_ws/install/log/trash). Always also checks the
+#   ros2_projects_ws repo (ROS2_PROJECTS_WS_ROOT). git fetch --prune,
+#   report ok/pull/push/manual, then one y/N to apply safe
+#   pull --ff-only / push. Paths required. Usage: git_ws <path> [path ...]
 # @macros-end
 
 # shellcheck disable=SC1091
