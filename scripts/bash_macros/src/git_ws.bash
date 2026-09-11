@@ -28,11 +28,12 @@ git_ws() {
 
     local -a apply_dirs=()
     local -a apply_actions=()
+    local -a apply_targets=()
     local dir display safe_count=0
     local status=0
 
     for dir in "${repos[@]}"; do
-        git_ws::_classify "$dir"
+        git_ws::_fetch_and_assess_repo "$dir"
         display="$(git_ws::_get_display_path "$dir")"
         git_ws::_print_repo_line \
             "$display" "$_gw_branch" "$_gw_upstream" \
@@ -42,13 +43,19 @@ git_ws() {
         if [[ "$_gw_action" == "pull" || "$_gw_action" == "push" ]]; then
             apply_dirs+=("$dir")
             apply_actions+=("$_gw_action")
+            apply_targets+=("")
+            safe_count=$((safe_count + 1))
+        elif [[ "$_gw_action" == "merged" && -n "$_gw_switch_target" ]]; then
+            apply_dirs+=("$dir")
+            apply_actions+=("switch")
+            apply_targets+=("$_gw_switch_target")
             safe_count=$((safe_count + 1))
         fi
     done
 
     echo
     if [[ "$safe_count" -eq 0 ]]; then
-        echo "Nothing safe to pull/push."
+        echo "Nothing safe to pull/push/switch."
         return 0
     fi
 
@@ -60,7 +67,9 @@ git_ws() {
     echo
     local i
     for i in "${!apply_dirs[@]}"; do
-        git_ws::_apply_safe "${apply_dirs[$i]}" "${apply_actions[$i]}" || status=1
+        git_ws::_apply_safe \
+            "${apply_dirs[$i]}" "${apply_actions[$i]}" "${apply_targets[$i]}" \
+            || status=1
     done
     return "$status"
 }

@@ -25,3 +25,15 @@ Private helpers in `scripts/bash_macros/`, `scripts/bash_bringup/`, and `scripts
 ## Abbreviations
 
 Keep names short, but spell out words a reader would have to expand. `term` for “terminal”, `cfg` for “config”, `mgr` for “manager” — no. Prefer `diag::_get_terminal_width` over `diag::_get_term_width`. Established acronyms are fine (`ros`, `src`, `uri`, `xml`).
+
+## Concrete verbs — no vague process names
+
+Name must say **what happens or what you get**, not a generic “do something with it”.
+
+| Avoid | Why | Prefer |
+|-------|-----|--------|
+| `canonicalize` | unclear which normalization | `get_absolute_path` |
+| `classify` / `process` / `handle` / `manage` | no object or outcome | `fetch_and_assess_repo`, `parse_importer_line` |
+| `update` / `do` / `run` alone | side effect opaque | `refresh_macro_cache`, `apply_safe_pull` |
+
+Same idea as [../cpp/naming.mdc](../cpp/naming.mdc) (“Name = actual role”).
