@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: "If you use this skill in your research, please cite it and disclose AI assistance per your institution's policy."
+title: "Academic Researcher — The Researcher's Operating System (a Claude Skill)"
+abstract: "An end-to-end Claude Agent Skill that supports the full lifecycle of academic research, from a first journal paper to a PhD by publication (thesis by published works): research-programme planning, supervision, simulated examination committee, quality-scored peer review, adversarial review sweeps, rival-mechanism auditing, reading-ledger discipline, power simulation, revision coaching, citation and evidence integrity auditing, literature mastery, and viva preparation. Built for independent and thinly-supervised researchers."
+type: software
+version: 2.0.0
+date-released: 2026-08-01
+license: MIT
+repository-code: "https://github.com/Scottthe3rd/academic-researcher-skill"
+keywords:
+  - academic research
+  - peer review sweep
+  - rival hypotheses
+  - reading log
+  - PhD by publication
+  - thesis by publication
+  - doctorate
+  - dissertation
+  - synthesis chapter
+  - kappa
+  - viva
+  - systematic review
+  - PRISMA
+  - peer review
+  - research methodology
+  - academic writing
+  - Claude skill
+  - Anthropic Agent Skill
+  - AI research assistant
+authors:
+  - given-names: "Scott"
+    alias: "Scottthe3rd"
+    # family-names: ""   # add your surname for a complete citation
+    # orcid: "https://orcid.org/0000-0000-0000-0000"   # add your ORCID if you have one

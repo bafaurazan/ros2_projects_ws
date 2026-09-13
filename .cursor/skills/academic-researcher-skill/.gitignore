@@ -1,0 +1,10 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Local build artifacts (the committed phd-by-publication.skill is intentional)
+*.zip
+__pycache__/
