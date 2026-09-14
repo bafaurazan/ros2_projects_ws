@@ -5,7 +5,7 @@
 git_ws::_usage() {
     echo "Usage: git_ws <path> [path ...]" >&2
     echo "  Discover git repos under the given paths, fetch, report status," >&2
-    echo "  and optionally apply safe pull/push/switch." >&2
+    echo "  and optionally apply safe pull/push/switch/set-upstream." >&2
     echo "  Always also checks the ros2_projects_ws repo (ROS2_PROJECTS_WS_ROOT)." >&2
     echo "  Example: git_ws .   # all nested repos under workspace root" >&2
     echo "           git_ws src/notaura_ws/docs src/notaura_ws/src" >&2
@@ -179,6 +179,7 @@ git_ws::_has_gone_upstream() {
 # Fetch --prune, then set sync globals for one repo:
 #   _gw_branch _gw_upstream _gw_ahead _gw_behind _gw_action _gw_reason
 #   _gw_fetch_ok _gw_fetch_out _gw_switch_target
+# Actions include: ok|info|pull|push|merged|set-upstream|push-upstream|no upstream|manual
 git_ws::_fetch_and_assess_repo() {
     local dir="$1"
     local fetch_status=0
@@ -222,9 +223,6 @@ git_ws::_fetch_and_assess_repo() {
                 _gw_switch_target="$merge_target"
                 return 0
             fi
-            _gw_action="no upstream"
-            _gw_reason="set upstream: git branch -u origin/${merge_target}"
-            return 0
         fi
         if git_ws::_has_gone_upstream "$dir" "$_gw_branch"; then
             if merge_target="$(git_ws::_get_integration_branch "$dir")"; then
@@ -234,19 +232,15 @@ git_ws::_fetch_and_assess_repo() {
                     _gw_switch_target="$merge_target"
                     return 0
                 fi
-                _gw_action="no upstream"
-                _gw_reason="set upstream: git branch -u origin/${merge_target}"
-                return 0
             fi
         fi
-        if [[ "$_gw_branch" == "develop" || "$_gw_branch" == "main" ]] \
-            && git_ws::_has_ref "$dir" "refs/remotes/origin/${_gw_branch}"; then
-            _gw_action="no upstream"
-            _gw_reason="set upstream: git branch -u origin/${_gw_branch}"
+        if git_ws::_has_ref "$dir" "refs/remotes/origin/${_gw_branch}"; then
+            _gw_action="set-upstream"
+            _gw_reason="git branch -u origin/${_gw_branch}"
             return 0
         fi
-        _gw_action="no upstream"
-        _gw_reason="no upstream"
+        _gw_action="push-upstream"
+        _gw_reason="git push -u origin ${_gw_branch}"
         return 0
     fi
 
@@ -313,12 +307,13 @@ git_ws::_print_repo_line() {
 git_ws::_confirm_apply() {
     local count="$1"
     local reply=""
-    printf 'Apply safe pull/push/switch on %s repo(s)? [y/N] ' "$count"
+    printf 'Apply safe pull/push/switch/set-upstream on %s repo(s)? [y/N] ' "$count"
     read -r reply || true
     [[ "$reply" == "y" || "$reply" == "Y" ]]
 }
 
-# action: pull | push | switch. For switch, pass target as $3.
+# action: pull | push | switch | set-upstream | push-upstream.
+# For switch / set-upstream / push-upstream, pass branch target as $3.
 git_ws::_apply_safe() {
     local dir="$1"
     local action="$2"
@@ -358,6 +353,24 @@ git_ws::_apply_safe() {
                 fi
             fi
             echo "  ok"
+            ;;
+        set-upstream)
+            echo "→ branch -u origin/${target}: ${display}"
+            if git -C "$dir" branch -u "origin/${target}" "$target"; then
+                echo "  ok"
+            else
+                echo "  FAILED" >&2
+                return 1
+            fi
+            ;;
+        push-upstream)
+            echo "→ push -u origin ${target}: ${display}"
+            if git -C "$dir" push --set-upstream origin "$target"; then
+                echo "  ok"
+            else
+                echo "  FAILED" >&2
+                return 1
+            fi
             ;;
         *)
             return 0

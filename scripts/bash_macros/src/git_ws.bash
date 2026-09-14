@@ -50,12 +50,17 @@ git_ws() {
             apply_actions+=("switch")
             apply_targets+=("$_gw_switch_target")
             safe_count=$((safe_count + 1))
+        elif [[ "$_gw_action" == "set-upstream" || "$_gw_action" == "push-upstream" ]]; then
+            apply_dirs+=("$dir")
+            apply_actions+=("$_gw_action")
+            apply_targets+=("$_gw_branch")
+            safe_count=$((safe_count + 1))
         fi
     done
 
     echo
     if [[ "$safe_count" -eq 0 ]]; then
-        echo "Nothing safe to pull/push/switch."
+        echo "Nothing safe to pull/push/switch/set-upstream."
         return 0
     fi
 
