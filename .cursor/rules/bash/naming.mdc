@@ -35,5 +35,12 @@ Name must say **what happens or what you get**, not a generic “do something wi
 | `canonicalize` | unclear which normalization | `get_absolute_path` |
 | `classify` / `process` / `handle` / `manage` | no object or outcome | `fetch_and_assess_repo`, `parse_importer_line` |
 | `update` / `do` / `run` alone | side effect opaque | `refresh_macro_cache`, `apply_safe_pull` |
+| `validate` / `check` alone | no object or scope; unclear what is verified or required | `validate_cli_arguments`, `validate_can_prerequisites`, `check_interface_exists` |
+| `start` / `stop` / `cleanup` alone | no object; unclear which process or resource | `start_bms_candump_listener`, `cleanup_resources` |
 
 Same idea as [../cpp/naming.mdc](../cpp/naming.mdc) (“Name = actual role”).
+
+## Name = actual role and full scope
+
+- **Function names must name the target/scope**: Never use bare verbs like `validate()`, `check()`, `start()`, or `cleanup()`. Explicitly name what is being validated, started, or cleaned up (e.g. `validate_cli_arguments()`, `validate_can_prerequisites()`, `start_bms_candump_listener()`, `cleanup_resources()`).
+- **Variables must describe domain, role, and units**: Avoid vague single-word identifiers (`cycles`, `interval`) or cryptic shorthand (`dev_hex`, `iface`, `comms_flag`). State the domain, purpose, and units explicitly (e.g. `poll_cycles`, `poll_interval_seconds`, `can_interface`, `bms_device_id_hex`, `bms_response_received_flag_file`).
