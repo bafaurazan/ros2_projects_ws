@@ -20,12 +20,12 @@ Script layout: [scripts/README.md](scripts/README.md).
 
 Available after setup. Names must be unique across all `scripts/bash_macros/` bundles.
 
-- `build [colcon args...]` — rosdep / apt / pip, then `cbuild`. Requires `./src` in CWD.
-- `cbuild [colcon args...]` — colcon into `./build_ws/build_<ROS_DISTRO>/`, `install_*`, `log_*`.
+- `build [colcon args...]` — rosdep / apt / pip, then `cbuild`. Requires `./src` in CWD. On success, sources `build_ws/install_<ROS_DISTRO>/local_setup.bash` (same as `cbuild`).
+- `cbuild [colcon args...]` — colcon into `./build_ws/build_<ROS_DISTRO>/`, `install_*`, `log_*`. On success, sources that install overlay in the current shell — do not also document a manual `source …/local_setup.bash` for the same session.
 - `diag` — env checks and a live list of public macros (grouped by repo).
 - `load_macros` — rediscover `scripts/bash_macros/` and source `launch/macros.bash` in place (no copy).
 - `importer <name>` — clone a target from [`scripts/bash_macros/config/importer.repos`](scripts/bash_macros/config/importer.repos) on first use, then `load_macros`. No-op if already present. Tries `github.com`, then SSH aliases for `github.com` from `~/.ssh/config`.
-- `git_ws <path> [path ...]` — recursively discover nested git repos under paths (always also checks `ros2_projects_ws` / `ROS2_PROJECTS_WS_ROOT`), fetch, report `ok`/`info`/`pull`/`push`/`merged`/`set-upstream`/`push-upstream`/`no upstream`/`manual` (`info` when fetch reported changes but the current branch is in sync; `merged` when no upstream and HEAD is already in `origin/develop`/`origin/main`, or local tracking remains after the remote branch was deleted — e.g. squash PR + delete; `set-upstream` when remote branch exists; `push-upstream` when publishing a new local branch), optional shared `y/N` for safe pull/push/switch(+pull)/`branch -u`/`push -u`.
+- `git_ws <path> [path ...]` — recursively discover nested git repos under paths (always also checks `ros2_projects_ws` / `ROS2_PROJECTS_WS_ROOT`), fetch, report `ok`/`info`/`pull`/`push`/`merged`/`set-upstream`/`push-upstream`/`no upstream`/`manual` (`info` when fetch reported changes but the current branch is in sync; `merged` when no upstream and HEAD is already in `origin/develop`/`origin/main`, or local tracking remains after the remote branch was deleted — e.g. squash PR + delete; `set-upstream` when remote branch exists; `push-upstream` when publishing a new local branch; on `develop`/`main` `ok`/`info`, report-only `hint:` lines for `origin/*` ahead of integration — feature-branch checkout is manual), optional shared `y/N` for safe pull/push/switch(+pull)/`branch -u`/`push -u`.
 
 Convention and layout: [scripts/bash_macros/README.md](scripts/bash_macros/README.md).
 

@@ -286,6 +286,32 @@ git_ws::_print_fetch_out() {
     done <<< "$fetch_out"
 }
 
+# Report-only: origin/* tips strictly ahead of origin/develop|main (no safe apply).
+git_ws::_print_sibling_ahead_hints() {
+    local dir="$1"
+    local integration integration_ref integration_tip
+    local ref branch_name remote_tip ahead
+
+    integration="$(git_ws::_get_integration_branch "$dir")" || return 0
+    integration_ref="refs/remotes/origin/${integration}"
+    git_ws::_has_ref "$dir" "$integration_ref" || return 0
+    integration_tip="$(git -C "$dir" rev-parse "$integration_ref" 2>/dev/null)" || return 0
+
+    while IFS= read -r ref; do
+        [[ -n "$ref" ]] || continue
+        branch_name="${ref#refs/remotes/origin/}"
+        case "$branch_name" in
+            HEAD|develop|main) continue ;;
+        esac
+        remote_tip="$(git -C "$dir" rev-parse "$ref" 2>/dev/null)" || continue
+        [[ "$remote_tip" != "$integration_tip" ]] || continue
+        git -C "$dir" merge-base --is-ancestor "$integration_tip" "$remote_tip" 2>/dev/null || continue
+        ahead="$(git -C "$dir" rev-list --count "${integration_tip}..${remote_tip}" 2>/dev/null || echo 0)"
+        [[ "$ahead" -gt 0 ]] || continue
+        printf '  hint: origin/%s +%s vs %s\n' "$branch_name" "$ahead" "$integration"
+    done < <(git -C "$dir" for-each-ref --format='%(refname)' refs/remotes/origin/ 2>/dev/null)
+}
+
 git_ws::_print_repo_line() {
     local display="$1"
     local branch="$2"

@@ -23,7 +23,7 @@ alwaysApply: false
 - `build` / `cbuild` run **colcon** on `./src` — they build only **ROS 2 packages** (directories with `package.xml` that colcon discovers).
 - List packages: `colcon list` (in the directory that contains `./src`) or `diag`.
 - `--packages-select` — only names from `colcon list`. Do not guess names from CMake subfolders.
-- After a successful `cbuild`, the install overlay `install_<ROS_DISTRO>/local_setup.bash` is sourced. Deleting `./build_ws` removes that project's build trees only.
+- After a successful `cbuild` / `build`, the install overlay `build_ws/install_<ROS_DISTRO>/local_setup.bash` is **sourced in the current shell**. Do **not** tell the user (or write in plans/runbooks) to re-run `source …/local_setup.bash` after `cbuild`/`build` in the same session. Manual source is only for a **new** shell that did not just run those macros. Deleting `./build_ws` removes that project's build trees only.
 
 ### CMake subprojects (not colcon)
 

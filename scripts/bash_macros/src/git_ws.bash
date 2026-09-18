@@ -39,6 +39,10 @@ git_ws() {
             "$display" "$_gw_branch" "$_gw_upstream" \
             "$_gw_ahead" "$_gw_behind" "$_gw_action" "$_gw_reason"
         git_ws::_print_fetch_out "$_gw_fetch_out"
+        if [[ "$_gw_action" == "ok" || "$_gw_action" == "info" ]] \
+            && [[ "$_gw_branch" == "develop" || "$_gw_branch" == "main" ]]; then
+            git_ws::_print_sibling_ahead_hints "$dir"
+        fi
 
         if [[ "$_gw_action" == "pull" || "$_gw_action" == "push" ]]; then
             apply_dirs+=("$dir")

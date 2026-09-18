@@ -20,9 +20,11 @@
 #   Discover git repos under given paths recursively (skips
 #   build/build_ws/install/log/trash). Always also checks the
 #   ros2_projects_ws repo (ROS2_PROJECTS_WS_ROOT). git fetch --prune,
-#   report ok/info/pull/push/merged/set-upstream/push-upstream/no upstream/manual,
-#   then one y/N to apply safe pull --ff-only / push / switch+pull (merged tip
-#   into develop or main) / branch -u / push -u. Paths required.
+#   report ok/info/pull/push/merged/set-upstream/push-upstream/no upstream/manual;
+#   on develop|main ok/info, print report-only hints for origin/* ahead of
+#   integration (no apply). Then one y/N for safe pull --ff-only / push /
+#   switch+pull (merged tip into develop or main) / branch -u / push -u.
+#   Paths required.
 #   Usage: git_ws <path> [path ...]
 # @macros-end
 
