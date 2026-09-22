@@ -25,7 +25,7 @@ Available after setup. Names must be unique across all `scripts/bash_macros/` bu
 - `diag` — env checks and a live list of public macros (grouped by repo).
 - `load_macros` — rediscover `scripts/bash_macros/` and source `launch/macros.bash` in place (no copy).
 - `importer <name>` — clone a target from [`scripts/bash_macros/config/importer.repos`](scripts/bash_macros/config/importer.repos) on first use, then `load_macros`. No-op if already present. Tries `github.com`, then SSH aliases for `github.com` from `~/.ssh/config`.
-- `git_ws <path> [path ...]` — recursively discover nested git repos under paths (always also checks `ros2_projects_ws` / `ROS2_PROJECTS_WS_ROOT`), fetch, report `ok`/`info`/`pull`/`push`/`merged`/`set-upstream`/`push-upstream`/`no upstream`/`manual` (`info` when fetch reported changes but the current branch is in sync; `merged` when no upstream and HEAD is already in `origin/develop`/`origin/main`, or local tracking remains after the remote branch was deleted — e.g. squash PR + delete; `set-upstream` when remote branch exists; `push-upstream` when publishing a new local branch), optional shared `y/N` for safe pull/push/switch(+pull)/`branch -u`/`push -u`.
+- `git_ws <path> [path ...]` — recursively discover nested git repos under paths (always also checks `ros2_projects_ws` / `ROS2_PROJECTS_WS_ROOT`), fetch, diag-style report vs `origin/develop` (`ok`/`info`/`pull`/`push`/`push-upstream`/`switch`/`manual`), then separate `y/N` (or `p`/`d`/`N` for orphan locals) per safe action — no shared confirm, no flags, develop only, no `branch -u`.
 
 Convention and layout: [scripts/bash_macros/README.md](scripts/bash_macros/README.md).
 
