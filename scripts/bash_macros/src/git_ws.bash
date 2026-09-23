@@ -26,9 +26,13 @@ git_ws() {
     echo "Found ${#repos[@]} repo(s). Fetching..."
     echo
 
+    _gw_summary_paths=()
+    _gw_summary_actions=()
+
     local dir status=0
     for dir in "${repos[@]}"; do
         git_ws::_process_repo "$dir" || status=1
     done
+    git_ws::_print_summary
     return "$status"
 }

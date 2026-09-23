@@ -6,7 +6,7 @@ git_ws::_usage() {
     echo "Usage: git_ws <path> [path ...]" >&2
     echo "  Discover git repos under the given paths, fetch --prune, print a" >&2
     echo "  diag-style report per repo (vs origin/develop), then ask y/N" >&2
-    echo "  (or p/d/N for orphan locals) for each safe action separately." >&2
+    echo "  (pull: y/i/N; orphan locals: p/d/N with delete confirm) separately." >&2
     echo "  Always also checks the ros2_projects_ws repo (ROS2_PROJECTS_WS_ROOT)." >&2
     echo "  Example: git_ws .   # all nested repos under workspace root" >&2
     echo "           git_ws src/notaura_ws/docs src/notaura_ws/src" >&2
@@ -305,7 +305,7 @@ git_ws::_has_gone_upstream() {
 #   _gw_branch _gw_upstream _gw_ahead _gw_behind
 #   _gw_dev_ahead _gw_dev_behind _gw_has_develop
 #   _gw_action _gw_reason _gw_fetch_ok _gw_fetch_out _gw_switch_target
-# Actions: ok|info|pull|push|push-upstream|switch|manual
+# Actions: ok|info|behind-develop|pull|push|push-upstream|switch|manual
 git_ws::_fetch_and_assess_repo() {
     local dir="$1"
     local fetch_status=0
@@ -380,7 +380,9 @@ git_ws::_fetch_and_assess_repo() {
             _gw_reason="ahead of upstream by ${_gw_ahead} — git push"
             return 0
         fi
-        if [[ -n "$_gw_fetch_out" ]]; then
+        if [[ "${_gw_dev_behind:-0}" -gt 0 ]]; then
+            _gw_action="behind-develop"
+        elif [[ -n "$_gw_fetch_out" ]]; then
             _gw_action="info"
         else
             _gw_action="ok"
@@ -447,6 +449,7 @@ git_ws::_print_remote_vs_develop() {
         short="${ref#refs/remotes/}"
         [[ "$short" == "origin/develop" || "$short" == "origin/HEAD" ]] && continue
         if [[ "$any" -eq 0 ]]; then
+            echo
             echo "remote branches vs develop:"
             any=1
         fi
@@ -469,6 +472,7 @@ git_ws::_print_orphan_locals() {
         fi
         _gw_orphan_branches+=("$name")
         if [[ "$any" -eq 0 ]]; then
+            echo
             echo "local without remote:"
             any=1
         fi
@@ -487,7 +491,15 @@ git_ws::_print_repo_report() {
     local display
     display="$(git_ws::_get_display_path "$dir")"
 
-    echo "=== ${display} ==="
+    echo "===="
+    echo "${display}"
+    echo "===="
+    if [[ -n "$_gw_reason" ]]; then
+        printf '[%s] %s\n' "$_gw_action" "$_gw_reason"
+    else
+        printf '[%s]\n' "$_gw_action"
+    fi
+    echo
     printf 'branch:     %s\n' "${_gw_branch}"
     if [[ "$_gw_has_develop" -eq 1 ]]; then
         printf 'vs develop: ahead %s, behind %s\n' "${_gw_dev_ahead}" "${_gw_dev_behind}"
@@ -495,20 +507,14 @@ git_ws::_print_repo_report() {
         printf 'vs develop: n/a (no origin/develop)\n'
     fi
     if [[ -n "$_gw_upstream" ]]; then
-        printf 'upstream:   %s  ahead %s, behind %s\n' \
+        printf 'vs upstream: %s  ahead %s, behind %s\n' \
             "$_gw_upstream" "$_gw_ahead" "$_gw_behind"
     else
-        printf 'upstream:   none\n'
+        printf 'vs upstream: none\n'
     fi
     git_ws::_print_fetch_section "$_gw_fetch_out"
     git_ws::_print_remote_vs_develop "$dir"
     git_ws::_print_orphan_locals "$dir"
-
-    if [[ -n "$_gw_reason" ]]; then
-        printf '[%s] %s\n' "$_gw_action" "$_gw_reason"
-    else
-        printf '[%s]\n' "$_gw_action"
-    fi
 }
 
 # Read interactive reply from the controlling terminal (not from a here-string/pipe).
@@ -531,49 +537,97 @@ git_ws::_confirm_yes() {
     [[ "$reply" == "y" || "$reply" == "Y" ]]
 }
 
-# Prompt for orphan local: p=push -u, d=delete (if merged), N=skip.
-# Returns via echo? Uses apply directly. Exit 0 always unless apply fails → return 1.
+# Print commits and diff that an ff-only pull would bring (HEAD..upstream).
+git_ws::_print_incoming_pull_diff() {
+    local dir="$1"
+    local upstream="${_gw_upstream}"
+
+    if [[ -z "$upstream" ]]; then
+        echo "incoming: no upstream"
+        return 0
+    fi
+
+    echo
+    echo "incoming (HEAD..${upstream}):"
+    git -C "$dir" log --oneline "HEAD..${upstream}" 2>/dev/null || true
+    echo
+    echo "incoming diff (--stat):"
+    git -C "$dir" diff --stat "HEAD...${upstream}" 2>/dev/null || true
+    echo
+    echo "incoming diff:"
+    git -C "$dir" --no-pager diff "HEAD...${upstream}" 2>/dev/null || true
+    echo
+}
+
+# Prompt for pull: y=apply, i=show incoming diff, N=skip. Returns 0 to apply.
+git_ws::_confirm_pull() {
+    local dir="$1"
+    local reply=""
+
+    while true; do
+        echo "Apply pull --ff-only?"
+        echo "  y = pull --ff-only"
+        echo "  i = show incoming changes (git log + git diff)"
+        echo "  N = skip (default)"
+        printf 'Choose [y/i/N]: '
+        git_ws::_read_tty reply
+        reply="${reply:-N}"
+        case "$reply" in
+            y|Y)
+                return 0
+                ;;
+            i|I)
+                git_ws::_print_incoming_pull_diff "$dir"
+                ;;
+            *)
+                return 1
+                ;;
+        esac
+    done
+}
+
+# Prompt for orphan local: p=push -u, d=delete (always; confirm y), N=skip.
+# Exit 0 always unless apply fails → return 1.
 git_ws::_confirm_orphan() {
     local dir="$1"
     local name="$2"
     local display="$3"
-    local can_delete=0
     local merge_kind=""
-    local delete_flag="-d"
+    local delete_flag="-D"
     local reply=""
-    local note choices
+    local note
+    local sure=""
 
     if git_ws::_classify_develop_merge "$dir" "$name"; then
-        can_delete=1
         merge_kind="$_gw_merge_kind"
         note="$(git_ws::_get_develop_merge_note)"
         note="${note% (safe to delete)}"
         # Squash/equivalent tips are not ancestors; -d refuses — use -D
-        # only after our check.
+        # only after our check. Ancestor merges can use -d.
         if [[ "$merge_kind" == "equivalent" || "$merge_kind" == "squash" ]]; then
             delete_flag="-D"
+        else
+            delete_flag="-d"
         fi
     else
         note="not in develop — has unique commits"
+        delete_flag="-D"
     fi
 
     echo
     echo "local without remote: ${name}  (${note})"
     echo "  p = push -u origin ${name}"
-    if [[ "$can_delete" -eq 1 ]]; then
-        if [[ "$delete_flag" == "-D" ]]; then
+    if [[ "$delete_flag" == "-D" ]]; then
+        if [[ -n "$merge_kind" ]]; then
             echo "  d = delete local branch (git branch -D; already on develop via squash/equivalent)"
         else
-            echo "  d = delete local branch (git branch -d)"
+            echo "  d = delete local branch (git branch -D; has unique commits)"
         fi
-        echo "  N = skip (default)"
-        choices="p/d/N"
     else
-        echo "  N = skip (default)"
-        echo "  (d = delete unavailable — branch is not in develop)"
-        choices="p/N"
+        echo "  d = delete local branch (git branch -d)"
     fi
-    printf 'Choose [%s]: ' "$choices"
+    echo "  N = skip (default)"
+    printf 'Choose [p/d/N]: '
     git_ws::_read_tty reply
     reply="${reply:-N}"
 
@@ -588,8 +642,10 @@ git_ws::_confirm_orphan() {
             return 1
             ;;
         d|D)
-            if [[ "$can_delete" -ne 1 ]]; then
-                echo "  skipped (delete not available)"
+            printf 'Are you sure to delete this branch? [y/N] '
+            git_ws::_read_tty sure
+            if [[ "$sure" != "y" && "$sure" != "Y" ]]; then
+                echo "  skipped"
                 return 0
             fi
             echo "→ branch ${delete_flag} ${name}: ${display}"
@@ -667,16 +723,22 @@ git_ws::_apply_safe() {
 git_ws::_process_repo() {
     local dir="$1"
     local display status=0
-    local name
+    local name summary_label
     _gw_orphan_branches=()
 
     git_ws::_fetch_and_assess_repo "$dir"
     display="$(git_ws::_get_display_path "$dir")"
     git_ws::_print_repo_report "$dir"
 
+    summary_label="$(git_ws::_get_absolute_path "$dir" || printf '%s\n' "$dir")"
+    summary_label="${summary_label##*/}"
+    [[ -n "$summary_label" ]] || summary_label="$display"
+    _gw_summary_paths+=("$summary_label")
+    _gw_summary_actions+=("$_gw_action")
+
     case "$_gw_action" in
         pull)
-            if git_ws::_confirm_yes "Apply pull --ff-only?"; then
+            if git_ws::_confirm_pull "$dir"; then
                 git_ws::_apply_safe "$dir" "pull" || status=1
             else
                 echo "  skipped"
@@ -716,4 +778,15 @@ git_ws::_process_repo() {
 
     echo
     return "$status"
+}
+
+# Print end-of-run status list collected during _process_repo.
+git_ws::_print_summary() {
+    local i
+    echo "===="
+    echo "summary"
+    echo "===="
+    for i in "${!_gw_summary_paths[@]}"; do
+        printf '%s - [%s]\n' "${_gw_summary_paths[$i]}" "${_gw_summary_actions[$i]}"
+    done
 }
