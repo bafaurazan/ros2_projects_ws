@@ -305,7 +305,8 @@ git_ws::_has_gone_upstream() {
 #   _gw_branch _gw_upstream _gw_ahead _gw_behind
 #   _gw_dev_ahead _gw_dev_behind _gw_has_develop
 #   _gw_action _gw_reason _gw_fetch_ok _gw_fetch_out _gw_switch_target
-# Actions: ok|info|behind-develop|pull|push|push-upstream|switch|manual
+# Actions: ok|develop|behind-develop|pull|push|push-upstream|switch|manual
+# Display may append " - info" when fetch printed news (see _get_action_label).
 git_ws::_fetch_and_assess_repo() {
     local dir="$1"
     local fetch_status=0
@@ -333,7 +334,7 @@ git_ws::_fetch_and_assess_repo() {
     git_ws::_assess_repo "$dir"
 }
 
-# Assess repo state into globals (no fetch). Uses existing _gw_fetch_out for info.
+# Assess repo state into globals (no fetch). Uses existing _gw_fetch_out for info suffix.
 git_ws::_assess_repo() {
     local dir="$1"
 
@@ -399,8 +400,8 @@ git_ws::_assess_repo() {
         fi
         if [[ "${_gw_dev_behind:-0}" -gt 0 ]]; then
             _gw_action="behind-develop"
-        elif [[ -n "$_gw_fetch_out" ]]; then
-            _gw_action="info"
+        elif [[ "$_gw_branch" == "develop" ]]; then
+            _gw_action="develop"
         else
             _gw_action="ok"
         fi
@@ -503,18 +504,28 @@ git_ws::_print_orphan_locals() {
     done < <(git -C "$dir" for-each-ref --format='%(refname:short)' refs/heads/ 2>/dev/null | sort)
 }
 
+# Display label for _gw_action; appends " - info" when fetch printed news.
+git_ws::_get_action_label() {
+    if [[ -n "${_gw_fetch_out:-}" ]]; then
+        printf '%s - info\n' "$_gw_action"
+    else
+        printf '%s\n' "$_gw_action"
+    fi
+}
+
 git_ws::_print_repo_report() {
     local dir="$1"
-    local display
+    local display label
     display="$(git_ws::_get_display_path "$dir")"
+    label="$(git_ws::_get_action_label)"
 
     echo "===="
     echo "${display}"
     echo "===="
     if [[ -n "$_gw_reason" ]]; then
-        printf '[%s] %s\n' "$_gw_action" "$_gw_reason"
+        printf '[%s] %s\n' "$label" "$_gw_reason"
     else
-        printf '[%s]\n' "$_gw_action"
+        printf '[%s]\n' "$label"
     fi
     echo
     printf 'branch:     %s\n' "${_gw_branch}"
@@ -811,7 +822,7 @@ git_ws::_process_repo() {
     summary_label="${summary_label##*/}"
     [[ -n "$summary_label" ]] || summary_label="$display"
     _gw_summary_paths+=("$summary_label")
-    _gw_summary_actions+=("$_gw_action")
+    _gw_summary_actions+=("$(git_ws::_get_action_label)")
 
     echo
     return "$status"
