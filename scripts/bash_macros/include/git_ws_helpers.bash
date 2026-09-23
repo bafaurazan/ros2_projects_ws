@@ -4,9 +4,11 @@
 
 git_ws::_usage() {
     echo "Usage: git_ws <path> [path ...]" >&2
-    echo "  Discover git repos under the given paths, fetch --prune, print a" >&2
-    echo "  diag-style report per repo (vs origin/develop), then ask y/N" >&2
-    echo "  (pull: y/i/N; orphan locals: p/d/N with delete confirm) separately." >&2
+    echo "  Discover git repos under the given paths, fetch --prune (on" >&2
+    echo "  failure ask y/N to retry until success or skip; then still" >&2
+    echo "  assess local refs), print a diag-style report per repo (vs" >&2
+    echo "  origin/develop), then ask y/N (pull: y/i/N; orphan locals:" >&2
+    echo "  p/d/N with delete confirm) separately." >&2
     echo "  Always also checks the ros2_projects_ws repo (ROS2_PROJECTS_WS_ROOT)." >&2
     echo "  Example: git_ws .   # all nested repos under workspace root" >&2
     echo "           git_ws src/notaura_ws/docs src/notaura_ws/src" >&2
@@ -310,6 +312,8 @@ git_ws::_has_gone_upstream() {
 git_ws::_fetch_and_assess_repo() {
     local dir="$1"
     local fetch_status=0
+    local saved_fetch_out=""
+    local display=""
     _gw_branch=""
     _gw_upstream=""
     _gw_ahead=0
@@ -323,11 +327,33 @@ git_ws::_fetch_and_assess_repo() {
     _gw_fetch_out=""
     _gw_switch_target=""
 
-    _gw_fetch_out="$(git -C "$dir" fetch --prune --no-progress 2>&1)"
-    fetch_status=$?
+    display="$(git_ws::_get_display_path "$dir")"
+    while true; do
+        _gw_fetch_out="$(git -C "$dir" fetch --prune --no-progress 2>&1)"
+        fetch_status=$?
+        if [[ "$fetch_status" -eq 0 ]]; then
+            break
+        fi
+        echo
+        echo "fetch failed: ${display}"
+        if [[ -n "$_gw_fetch_out" ]]; then
+            while IFS= read -r line; do
+                [[ -n "$line" ]] || continue
+                printf '  %s\n' "$line"
+            done <<< "$_gw_fetch_out"
+        fi
+        if git_ws::_confirm_yes "Retry fetch?"; then
+            continue
+        fi
+        break
+    done
+
     if [[ "$fetch_status" -ne 0 ]]; then
+        # Still assess local refs so the report is not "n/a (no origin/develop)" spuriously.
+        saved_fetch_out="$_gw_fetch_out"
+        git_ws::_assess_repo "$dir"
         _gw_reason="fetch failed"
-        _gw_branch="$(git -C "$dir" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")"
+        _gw_fetch_out="$saved_fetch_out"
         return 0
     fi
     _gw_fetch_ok=1

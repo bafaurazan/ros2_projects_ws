@@ -19,7 +19,8 @@
 # macro git_ws
 #   Discover git repos under given paths recursively (skips
 #   build/build_ws/install/log/trash). Always also checks the
-#   ros2_projects_ws repo (ROS2_PROJECTS_WS_ROOT). git fetch --prune,
+#   ros2_projects_ws repo (ROS2_PROJECTS_WS_ROOT). git fetch --prune
+#   (on failure y/N retry until success or skip; then still assess local refs),
 #   diag-style report per repo (branch, vs origin/develop, upstream,
 #   remotes, local without remote), tags ok/develop/behind-develop/pull/push/push-upstream/
 #   switch/manual (fetch news appends " - info" to the tag). Separate y/N per safe action (pull: y/i/N; i = incoming
