@@ -445,7 +445,8 @@ git_ws::_print_fetch_section() {
     local fetch_out="$1"
     local line
     [[ -n "$fetch_out" ]] || return 0
-    echo "fetch:"
+    echo
+    echo "info:"
     while IFS= read -r line || [[ -n "$line" ]]; do
         [[ -n "$line" ]] || continue
         printf '  %s\n' "$line"
