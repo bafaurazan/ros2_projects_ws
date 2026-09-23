@@ -54,7 +54,7 @@ git_ws::_get_display_path() {
     if [[ -n "$root" ]]; then
         root_norm="$(git_ws::_get_absolute_path "$root" || printf '%s\n' "$root")"
         if [[ "$top_norm" == "$root_norm" ]]; then
-            printf '%s\n' "."
+            printf '%s\n' "$top_norm"
             return 0
         fi
         if [[ "$top_norm" == "$root_norm"/* ]]; then
@@ -561,6 +561,7 @@ git_ws::_read_tty() {
 git_ws::_confirm_yes() {
     local prompt="$1"
     local reply=""
+    echo
     printf '%s [y/N] ' "$prompt"
     git_ws::_read_tty reply
     [[ "$reply" == "y" || "$reply" == "Y" ]]
@@ -593,6 +594,7 @@ git_ws::_confirm_pull() {
     local dir="$1"
     local reply=""
 
+    echo
     while true; do
         echo "Apply pull --ff-only?"
         echo "  y = pull --ff-only"
