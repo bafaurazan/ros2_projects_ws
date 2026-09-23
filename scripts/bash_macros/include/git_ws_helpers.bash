@@ -301,7 +301,7 @@ git_ws::_has_gone_upstream() {
     ! git_ws::_has_ref "$dir" "$remote_ref"
 }
 
-# Fetch --prune, then set globals for one repo:
+# Fetch --prune, then set globals for one repo via _assess_repo.
 #   _gw_branch _gw_upstream _gw_ahead _gw_behind
 #   _gw_dev_ahead _gw_dev_behind _gw_has_develop
 #   _gw_action _gw_reason _gw_fetch_ok _gw_fetch_out _gw_switch_target
@@ -330,6 +330,23 @@ git_ws::_fetch_and_assess_repo() {
         return 0
     fi
     _gw_fetch_ok=1
+    git_ws::_assess_repo "$dir"
+}
+
+# Assess repo state into globals (no fetch). Uses existing _gw_fetch_out for info.
+git_ws::_assess_repo() {
+    local dir="$1"
+
+    _gw_branch=""
+    _gw_upstream=""
+    _gw_ahead=0
+    _gw_behind=0
+    _gw_dev_ahead=0
+    _gw_dev_behind=0
+    _gw_has_develop=0
+    _gw_action="manual"
+    _gw_reason=""
+    _gw_switch_target=""
 
     if git_ws::_has_develop "$dir"; then
         _gw_has_develop=1
@@ -723,44 +740,54 @@ git_ws::_apply_safe() {
 git_ws::_process_repo() {
     local dir="$1"
     local display status=0
-    local name summary_label
+    local name summary_label applied=0
     _gw_orphan_branches=()
 
     git_ws::_fetch_and_assess_repo "$dir"
     display="$(git_ws::_get_display_path "$dir")"
     git_ws::_print_repo_report "$dir"
 
-    summary_label="$(git_ws::_get_absolute_path "$dir" || printf '%s\n' "$dir")"
-    summary_label="${summary_label##*/}"
-    [[ -n "$summary_label" ]] || summary_label="$display"
-    _gw_summary_paths+=("$summary_label")
-    _gw_summary_actions+=("$_gw_action")
-
     case "$_gw_action" in
         pull)
             if git_ws::_confirm_pull "$dir"; then
-                git_ws::_apply_safe "$dir" "pull" || status=1
+                if git_ws::_apply_safe "$dir" "pull"; then
+                    applied=1
+                else
+                    status=1
+                fi
             else
                 echo "  skipped"
             fi
             ;;
         push)
             if git_ws::_confirm_yes "Apply push?"; then
-                git_ws::_apply_safe "$dir" "push" || status=1
+                if git_ws::_apply_safe "$dir" "push"; then
+                    applied=1
+                else
+                    status=1
+                fi
             else
                 echo "  skipped"
             fi
             ;;
         push-upstream)
             if git_ws::_confirm_yes "Apply push --set-upstream origin ${_gw_branch}?"; then
-                git_ws::_apply_safe "$dir" "push-upstream" "$_gw_branch" || status=1
+                if git_ws::_apply_safe "$dir" "push-upstream" "$_gw_branch"; then
+                    applied=1
+                else
+                    status=1
+                fi
             else
                 echo "  skipped"
             fi
             ;;
         switch)
             if git_ws::_confirm_yes "Apply switch ${_gw_switch_target} + pull --ff-only?"; then
-                git_ws::_apply_safe "$dir" "switch" "$_gw_switch_target" || status=1
+                if git_ws::_apply_safe "$dir" "switch" "$_gw_switch_target"; then
+                    applied=1
+                else
+                    status=1
+                fi
             else
                 echo "  skipped"
             fi
@@ -775,6 +802,16 @@ git_ws::_process_repo() {
         fi
         git_ws::_confirm_orphan "$dir" "$name" "$display" || status=1
     done
+
+    if [[ "$applied" -eq 1 ]]; then
+        _gw_fetch_out=""
+        git_ws::_assess_repo "$dir"
+    fi
+    summary_label="$(git_ws::_get_absolute_path "$dir" || printf '%s\n' "$dir")"
+    summary_label="${summary_label##*/}"
+    [[ -n "$summary_label" ]] || summary_label="$display"
+    _gw_summary_paths+=("$summary_label")
+    _gw_summary_actions+=("$_gw_action")
 
     echo
     return "$status"
