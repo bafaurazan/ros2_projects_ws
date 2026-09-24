@@ -542,18 +542,23 @@ git_ws::_get_action_label() {
 
 git_ws::_print_repo_report() {
     local dir="$1"
-    local display label
+    local display label repo_name
     display="$(git_ws::_get_display_path "$dir")"
     label="$(git_ws::_get_action_label)"
+    repo_name="$(git_ws::_get_absolute_path "$dir" || printf '%s\n' "$dir")"
+    repo_name="${repo_name##*/}"
+    [[ -n "$repo_name" ]] || repo_name="$display"
 
     echo "===="
-    echo "${display}"
+    echo "${repo_name}"
     echo "===="
     if [[ -n "$_gw_reason" ]]; then
         printf '[%s] %s\n' "$label" "$_gw_reason"
     else
         printf '[%s]\n' "$label"
     fi
+    echo
+    printf 'path:       %s\n' "$display"
     echo
     printf 'branch:     %s\n' "${_gw_branch}"
     if [[ "$_gw_has_develop" -eq 1 ]]; then
