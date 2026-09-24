@@ -1,14 +1,34 @@
 #!/usr/bin/bash
 
-# Usage: git_ws <path> [path ...]
+# Usage: git_ws [-r] <path> [path ...]
 
 git_ws() {
-    if [[ "$#" -lt 1 ]]; then
+    local recursive=0
+    local -a paths=()
+    local arg
+
+    for arg in "$@"; do
+        case "$arg" in
+            -r)
+                recursive=1
+                ;;
+            -*)
+                echo "git_ws: unknown option: ${arg}" >&2
+                git_ws::_usage
+                return 1
+                ;;
+            *)
+                paths+=("$arg")
+                ;;
+        esac
+    done
+
+    if [[ "${#paths[@]}" -lt 1 ]]; then
         git_ws::_usage
         return 1
     fi
 
-    git_ws::_require_paths "$@" || return 1
+    git_ws::_require_paths "${paths[@]}" || return 1
 
     local ws_repo
     ws_repo="$(git_ws::_get_workspace_repo)" || return 1
@@ -21,7 +41,7 @@ git_ws() {
         if [[ "$line" != "$ws_repo" ]]; then
             repos+=("$line")
         fi
-    done < <(git_ws::_find_repos "$@")
+    done < <(git_ws::_find_repos "$recursive" "${paths[@]}")
 
     echo "Found ${#repos[@]} repo(s). Fetching..."
     echo

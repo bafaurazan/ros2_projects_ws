@@ -3,15 +3,18 @@
 # Private helpers for git_ws. Bodies are git_ws::_*.
 
 git_ws::_usage() {
-    echo "Usage: git_ws <path> [path ...]" >&2
-    echo "  Discover git repos under the given paths, fetch --prune (on" >&2
+    echo "Usage: git_ws [-r] <path> [path ...]" >&2
+    echo "  Discover git repos at the given paths, fetch --prune (on" >&2
     echo "  failure ask y/N to retry until success or skip; then still" >&2
     echo "  assess local refs), print a diag-style report per repo (vs" >&2
     echo "  origin/develop), then ask y/N (pull: y/i/N; orphan locals:" >&2
     echo "  p/d/N with delete confirm) separately." >&2
+    echo "  -r  recursively discover nested git repos under the given paths" >&2
+    echo "      (skips build/build_ws/install/log/trash)." >&2
+    echo "  Without -r, only paths that are themselves git roots are checked." >&2
     echo "  Always also checks the ros2_projects_ws repo (ROS2_PROJECTS_WS_ROOT)." >&2
-    echo "  Example: git_ws .   # all nested repos under workspace root" >&2
-    echo "           git_ws src/notaura_ws/docs src/notaura_ws/src" >&2
+    echo "  Example: git_ws src/transporter   # that repo + workspace only" >&2
+    echo "           git_ws -r .              # all nested repos under ." >&2
 }
 
 # Print canonical toplevel of the meta-workspace git repo, or fail.
@@ -83,10 +86,13 @@ git_ws::_require_paths() {
 }
 
 # Print unique repo toplevels under the given paths (one per line).
-# Always includes a path that is itself a git root, then recursively finds
-# nested .git entries under the path (pruning build/build_ws/install/log/trash).
+# Args: <recursive 0|1> <path> [path ...]
+# Always includes a path that is itself a git root. With recursive=1, also
+# finds nested .git entries (pruning build/build_ws/install/log/trash).
 # Paths must already exist (see git_ws::_require_paths).
 git_ws::_find_repos() {
+    local recursive="$1"
+    shift
     local -A seen=()
     local path abs git_entry repo_dir toplevel top_norm
 
@@ -103,6 +109,13 @@ git_ws::_find_repos() {
                 seen[$top_norm]=1
                 printf '%s\n' "$top_norm"
             fi
+        elif [[ "$recursive" -eq 0 ]]; then
+            echo "git_ws: not a git repo (use -r to search nested): ${path}" >&2
+            continue
+        fi
+
+        if [[ "$recursive" -eq 0 ]]; then
+            continue
         fi
 
         while IFS= read -r -d '' git_entry; do
@@ -328,8 +341,18 @@ git_ws::_fetch_and_assess_repo() {
     _gw_switch_target=""
 
     display="$(git_ws::_get_display_path "$dir")"
+    # Fail unreachable remotes instead of hanging forever. Start at 5s, +5s per
+    # Retry fetch? [y], capped at 30s. Do not override a user-provided GIT_SSH_COMMAND.
+    local connect_timeout=5
+    local connect_timeout_max=30
+    local ssh_cmd=""
     while true; do
-        _gw_fetch_out="$(git -C "$dir" fetch --prune --no-progress 2>&1)"
+        if [[ -n "${GIT_SSH_COMMAND:-}" ]]; then
+            ssh_cmd="$GIT_SSH_COMMAND"
+        else
+            ssh_cmd="ssh -o ConnectTimeout=${connect_timeout} -o ConnectionAttempts=1"
+        fi
+        _gw_fetch_out="$(GIT_SSH_COMMAND="$ssh_cmd" git -C "$dir" fetch --prune --no-progress 2>&1)"
         fetch_status=$?
         if [[ "$fetch_status" -eq 0 ]]; then
             break
@@ -343,6 +366,12 @@ git_ws::_fetch_and_assess_repo() {
             done <<< "$_gw_fetch_out"
         fi
         if git_ws::_confirm_yes "Retry fetch?"; then
+            if [[ -z "${GIT_SSH_COMMAND:-}" && "$connect_timeout" -lt "$connect_timeout_max" ]]; then
+                connect_timeout=$((connect_timeout + 5))
+                if [[ "$connect_timeout" -gt "$connect_timeout_max" ]]; then
+                    connect_timeout=$connect_timeout_max
+                fi
+            fi
             continue
         fi
         break

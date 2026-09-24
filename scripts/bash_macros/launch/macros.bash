@@ -17,7 +17,7 @@
 #   Tries github.com then SSH aliases for github.com from ~/.ssh/config.
 #   Usage: importer <name>
 # macro git_ws
-#   Discover git repos under given paths recursively (skips
+#   Discover git repos at given paths (with -r: recursively, skips
 #   build/build_ws/install/log/trash). Always also checks the
 #   ros2_projects_ws repo (ROS2_PROJECTS_WS_ROOT). git fetch --prune
 #   (on failure y/N retry until success or skip; then still assess local refs),
@@ -25,9 +25,9 @@
 #   remotes, local without remote), tags ok/develop/behind-develop/pull/push/push-upstream/
 #   switch/manual (fetch news appends " - info" to the tag). Separate y/N per safe action (pull: y/i/N; i = incoming
 #   diff); orphan locals get p/d/N always (d asks Are you sure? before
-#   local delete). No flags; develop only (not main); no branch -u.
-#   Paths required.
-#   Usage: git_ws <path> [path ...]
+#   local delete). Without -r only paths that are themselves git roots;
+#   develop only (not main); no branch -u. Paths required.
+#   Usage: git_ws [-r] <path> [path ...]
 # @macros-end
 
 # shellcheck disable=SC1091
