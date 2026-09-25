@@ -46,6 +46,7 @@ diag::_print_environment() {
     echo "RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-<unset>}"
     echo "CYCLONEDDS_URI=${CYCLONEDDS_URI:-<unset>}"
     echo "_ENV_LOADED=${_ENV_LOADED:-<unset>}"
+    echo "ROS2_PROJECTS_WS_SESSION=${ROS2_PROJECTS_WS_SESSION:-<unset>}"
     diag::_print_github_hosts
     echo
 }

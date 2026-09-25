@@ -21,6 +21,8 @@ Workspace entry and three ROS-like bash packages. CLI is always:
 
 `source scripts/setup.bash macros` loads macros in the current shell instead of opening a new one.
 
+Interactive sessions display the active workspace mode as a session label prefix, e.g. `( macros ) ` or `( jazzy ) ` (exported in `ROS2_PROJECTS_WS_SESSION`).
+
 ## Layout
 
 ```text
@@ -36,7 +38,7 @@ bash_env/
   launch/backends/run_docker.bash       # prod stub + in-image session template
   src/impl_distrobox.bash               # Distrobox functions
   src/impl_docker.bash                  # prod stub functions
-  include/                              # ros2, display, platform, macros helpers
+  include/                              # ros2, display, platform, macros helpers, session_label
   config/                               # cyclone-dds.xml, *_config.bash
 bash_macros/
   launch/macros.bash                    # @macros registry + source lib/bundle_load.bash

@@ -10,5 +10,7 @@ Workspace runtimes: host macros, Distrobox, and Docker/Podman (`prod` stub). Dis
 | `launch/backends/run_docker.bash` | Host prod stub; sourced in-image → session template |
 | `src/impl_distrobox.bash` | Distrobox functions + `env::_run_distrobox` |
 | `src/impl_docker.bash` | Production stub (`env::_run_docker`) |
-| `include/` | ROS 2, display, platform, macros session helpers |
+| `include/` | ROS 2, display, platform, macros session helpers, session_label |
 | `config/` | CycloneDDS XML, Distrobox/Docker constants (`*_SESSION_SETUP` → backends) |
+
+Active sessions export `ROS2_PROJECTS_WS_SESSION` and prepend `( <session> ) ` to the shell prompt (e.g. `( macros ) `, `( jazzy ) `).

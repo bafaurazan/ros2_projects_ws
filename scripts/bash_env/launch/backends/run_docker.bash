@@ -7,6 +7,8 @@
 #
 
 _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "${_dir}/../../include/session_label.bash"
 
 env::_is_docker_session_loaded() {
     [[ -n "${_ENV_LOADED:-}" ]]
@@ -18,6 +20,7 @@ env::_set_docker_session_loaded() {
 
 env::_load_docker_session() {
     if env::_is_docker_session_loaded; then
+        env::_set_session_label "${ROS_DISTRO:-ros2} prod"
         return 0
     fi
     env::_set_docker_session_loaded
@@ -38,6 +41,8 @@ env::_load_docker_session() {
     # shellcheck disable=SC1091
     source "${ROS2_PROJECTS_WS_ROOT}/scripts/bash_macros/lib/completion.bash"
     _install_macros_completion
+
+    env::_set_session_label "${ROS_DISTRO:-ros2} prod"
 }
 
 # In-image session hook (sourced) — template until prod runtime wires DOCKER_SESSION_SETUP

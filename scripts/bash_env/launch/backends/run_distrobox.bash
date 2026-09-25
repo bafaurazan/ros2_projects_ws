@@ -7,6 +7,8 @@
 #
 
 _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "${_dir}/../../include/session_label.bash"
 
 env::_is_distrobox_session_loaded() {
     [[ -n "${_ENV_LOADED:-}" ]]
@@ -18,6 +20,7 @@ env::_set_distrobox_session_loaded() {
 
 env::_load_distrobox_session() {
     if env::_is_distrobox_session_loaded; then
+        env::_set_session_label "${ROS_DISTRO}"
         return 0
     fi
     env::_set_distrobox_session_loaded
@@ -38,6 +41,8 @@ env::_load_distrobox_session() {
     # shellcheck disable=SC1091
     source "${ROS2_PROJECTS_WS_ROOT}/scripts/bash_macros/lib/completion.bash"
     _install_macros_completion
+
+    env::_set_session_label "${ROS_DISTRO}"
 }
 
 # In-container bashrc hook (sourced)
