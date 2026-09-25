@@ -37,7 +37,7 @@ Targets registered in `importer.repos`. Details and usage live in each subprojec
 
 After `importer transporter`:
 
-- `tr_pub [-y|--yes] [-clear] [path ...]` / `tr_sub [-y|--yes] [-clear]` — copy into `inbox/` as regular files (optional paths; nested `.git` / `.gitignore` stripped), commit, then pull+push; `tr_sub` is fetch+pull and fails if dirty. `-clear` resets history; `-y` skips prompts.
+- `tr_pub [-y|--yes] [--clear] [path ...]` / `tr_sub [-y|--yes] [--clear]` — copy into `inbox/` as regular files (optional paths; nested `.git` / `.gitignore` stripped), commit, then pull+push; `tr_sub` is fetch+pull and fails if dirty. `--clear` resets history; `-y` skips prompts.
 
 Docs: [src/transporter/README.md](src/transporter/README.md), [src/transporter/scripts/bash_macros/README.md](src/transporter/scripts/bash_macros/README.md).
 
