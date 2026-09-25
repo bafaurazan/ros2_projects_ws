@@ -8,7 +8,8 @@ git_ws::_usage() {
     echo "  failure ask y/N to retry until success or skip; then still" >&2
     echo "  assess local refs), print a diag-style report per repo (vs" >&2
     echo "  origin/develop), then ask y/N (pull: y/i/N; orphan locals:" >&2
-    echo "  p/d/N with delete confirm) separately." >&2
+    echo "  p/d/N with delete confirm) separately. Branches whose tip" >&2
+    echo "  equals origin/develop (no unique commits) are report-only." >&2
     echo "  -r  recursively discover nested git repos under the given paths" >&2
     echo "      (skips build/build_ws/install/log/trash)." >&2
     echo "  Without -r, only paths that are themselves git roots are checked." >&2
@@ -152,20 +153,29 @@ git_ws::_has_develop() {
 }
 
 # Classify tip vs origin/develop. Sets _gw_merge_kind to:
-#   ancestor   — tip is a literal ancestor of origin/develop
+#   at_develop — tip SHA equals origin/develop (no unique commits)
+#   ancestor   — tip is a strict ancestor of origin/develop
 #   equivalent — merge-tree into develop yields develop's tree
 #   squash     — squash/PR evidence on develop (GitHub-style leftover branch)
 #   ""         — not fully in develop
 # Also sets _gw_merge_detail (optional, e.g. "#8" or short sha).
-# Returns 0 when merged (ancestor | equivalent | squash), 1 otherwise.
+# Returns 0 when classified (any kind above), 1 otherwise.
 git_ws::_classify_develop_merge() {
     local dir="$1"
     local tip="$2"
-    local merged_tree dev_tree branch_for_search
+    local merged_tree dev_tree branch_for_search tip_sha develop_sha
     _gw_merge_kind=""
     _gw_merge_detail=""
 
     git_ws::_has_develop "$dir" || return 1
+
+    tip_sha="$(git -C "$dir" rev-parse "$tip" 2>/dev/null)" || return 1
+    develop_sha="$(git -C "$dir" rev-parse "refs/remotes/origin/develop" 2>/dev/null)" || return 1
+    # Same commit as develop: not a post-merge leftover (empty/unstarted branch).
+    if [[ "$tip_sha" == "$develop_sha" ]]; then
+        _gw_merge_kind="at_develop"
+        return 0
+    fi
 
     if git -C "$dir" merge-base --is-ancestor "$tip" "refs/remotes/origin/develop" 2>/dev/null; then
         _gw_merge_kind="ancestor"
@@ -200,10 +210,15 @@ git_ws::_classify_develop_merge() {
 }
 
 # True if tip is in origin/develop (true merge, content-equivalent, or squash/PR).
+# at_develop (same tip, no unique commits) is classified but not "merged".
 git_ws::_is_merged_into_develop() {
     local dir="$1"
     local tip="$2"
-    git_ws::_classify_develop_merge "$dir" "$tip"
+    git_ws::_classify_develop_merge "$dir" "$tip" || return 1
+    case "$_gw_merge_kind" in
+        ancestor|equivalent|squash) return 0 ;;
+        *) return 1 ;;
+    esac
 }
 
 # Look for squash/PR evidence on origin/develop for a local branch name.
@@ -268,6 +283,9 @@ git_ws::_find_squash_pr_on_develop() {
 
 git_ws::_get_develop_merge_note() {
     case "${_gw_merge_kind}" in
+        at_develop)
+            printf '%s\n' "same tip as develop (no unique commits)"
+            ;;
         ancestor)
             printf '%s\n' "merged into develop (safe to delete)"
             ;;
@@ -470,6 +488,15 @@ git_ws::_assess_repo() {
     if git_ws::_has_ref "$dir" "refs/remotes/origin/${_gw_branch}"; then
         _gw_action="manual"
         _gw_reason="remote exists but no upstream tracking"
+        return 0
+    fi
+
+    # Same tip as develop, no unique commits — not leftover after a merge.
+    if [[ "$_gw_branch" != "develop" ]] \
+        && git_ws::_classify_develop_merge "$dir" "HEAD" \
+        && [[ "$_gw_merge_kind" == "at_develop" ]]; then
+        _gw_action="ok"
+        _gw_reason=""
         return 0
     fi
 
@@ -677,8 +704,8 @@ git_ws::_confirm_pull() {
     done
 }
 
-# Prompt for orphan local: p=push -u, d=delete (always; confirm y), N=skip.
-# Exit 0 always unless apply fails → return 1.
+# Prompt for orphan local: p=push -u, d=delete (confirm y), N=skip.
+# Caller skips at_develop (same tip as develop). Exit 0 unless apply fails → 1.
 git_ws::_confirm_orphan() {
     local dir="$1"
     local name="$2"
@@ -868,10 +895,15 @@ git_ws::_process_repo() {
             ;;
     esac
 
-    # Orphan locals (never delete/prompt for current branch — HEAD actions above).
+    # Orphan locals (never delete/prompt for current branch — HEAD actions above;
+    # skip at_develop: same tip as develop, no unique commits).
     for name in "${_gw_orphan_branches[@]}"; do
         [[ -n "$name" ]] || continue
         if [[ "$name" == "$_gw_branch" ]]; then
+            continue
+        fi
+        if git_ws::_classify_develop_merge "$dir" "$name" \
+            && [[ "$_gw_merge_kind" == "at_develop" ]]; then
             continue
         fi
         git_ws::_confirm_orphan "$dir" "$name" "$display" || status=1
