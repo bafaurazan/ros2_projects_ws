@@ -20,10 +20,13 @@ else
 fi
 
 env::_print_usage() {
-    echo "Usage: ./scripts/setup.bash [humble|jazzy [prod]|macros]" >&2
+    echo "Usage: ./scripts/setup.bash [-v|--verbose] [humble|jazzy [prod]|macros]" >&2
+    echo "       ./scripts/setup.bash [-h|--help]" >&2
     echo "  humble | jazzy       Distrobox runtime" >&2
     echo "  humble | jazzy prod  production runtime (not implemented yet)" >&2
     echo "  macros               interactive shell with macros (no Distrobox)" >&2
+    echo "  -v, --verbose        detailed diagnostic logs (first-boot progress, apt)" >&2
+    echo "  -h, --help           show this help" >&2
 }
 
 env::_fail() {

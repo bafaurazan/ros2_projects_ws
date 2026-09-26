@@ -5,6 +5,9 @@
 # - Executed: start interactive bash with this file as --rcfile
 # - Sourced (from runtime_dispatch or as --rcfile): load workspace macros
 #
+# Honor ROS2_PROJECTS_WS_VERBOSE (set by setup.bash -v/--verbose) for future
+# diagnostic output from macros bringup; currently unused.
+#
 
 _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091

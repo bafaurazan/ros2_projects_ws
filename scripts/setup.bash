@@ -5,6 +5,7 @@
 #
 #   ./scripts/setup.bash humble
 #   ./scripts/setup.bash jazzy
+#   ./scripts/setup.bash jazzy --verbose
 #   ./scripts/setup.bash macros
 #   ./scripts/setup.bash jazzy prod   # reserved — not implemented yet
 #
