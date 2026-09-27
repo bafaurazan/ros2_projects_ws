@@ -328,7 +328,7 @@ diag::_print_macros() {
     while IFS= read -r src; do
         [[ -n "$src" ]] || continue
         found=1
-        repo="$(load::_get_repo_from_path "$src")"
+        repo="$(load_macros::_get_repo_from_path "$src")"
         echo
         echo "[$repo]"
         launch_file="${src}/launch/macros.bash"
@@ -349,7 +349,7 @@ diag::_print_macros() {
             summary_repos+=("$repo")
             summary_macros+=("$repo_macros")
         fi
-    done < <(load::_find_sources "${ROS2_PROJECTS_WS_ROOT}")
+    done < <(load_macros::_find_sources "${ROS2_PROJECTS_WS_ROOT}")
 
     if [[ "$found" -eq 0 ]]; then
         echo "No scripts/bash_macros/ bundles found."

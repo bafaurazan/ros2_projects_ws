@@ -45,7 +45,7 @@ bash_macros/
   src/                                  # build, cbuild, diag, load_macros, importer
   include/                              # namespaced helpers (ns::_)
   lib/                                  # bundle_load + TAB completion
-  config/                               # importer.repos
+  config/repos/                         # importer.yaml (vcstool YAML)
 ```
 
 Macros convention: [bash_macros/README.md](bash_macros/README.md). Helpers in `bash_bringup` / `bash_env` use the same `ns::_name` form (`bringup::` / `env::`).

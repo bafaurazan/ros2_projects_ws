@@ -1,0 +1,15 @@
+# Importer targets (vcstool YAML). Key = dest relative to workspace root.
+# CLI: importer <basename-or-full-key>  (e.g. transporter or src/transporter)
+repositories:
+  src/transporter:
+    type: git
+    url: git@github.com:bafaurazan/transporter.git
+    version: develop
+  src/notaura_ws:
+    type: git
+    url: git@github.com:TheNotAura/notaura_ws.git
+    version: develop
+  src/husarz_ws:
+    type: git
+    url: git@github.com:bafaurazan/husarz_ws.git
+    version: develop

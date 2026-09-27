@@ -24,14 +24,14 @@ Available after setup. Names must be unique across all `scripts/bash_macros/` bu
 - `cbuild [colcon args...]` — colcon into `./build_ws/build_<ROS_DISTRO>/`, `install_*`, `log_*`.
 - `diag` — env checks and a live list of public macros (grouped by repo).
 - `load_macros` — rediscover `scripts/bash_macros/` and source `launch/macros.bash` in place (no copy).
-- `importer <name>` — clone a target from [`scripts/bash_macros/config/importer.repos`](scripts/bash_macros/config/importer.repos) on first use, then `load_macros`. No-op if already present. Tries `github.com`, then SSH aliases for `github.com` from `~/.ssh/config`.
+- `importer <name>` — clone a target from [`scripts/bash_macros/config/repos/importer.yaml`](scripts/bash_macros/config/repos/importer.yaml) on first use, then `load_macros`. No-op if already present. Tries `github.com`, then SSH aliases for `github.com` from `~/.ssh/config`.
 - `git_ws [-r] <path> [path ...]` — discover git repos at paths (`-r`: recursively nested under them; without `-r` only paths that are themselves git roots; always also checks `ros2_projects_ws` / `ROS2_PROJECTS_WS_ROOT`), fetch (on failure `Retry fetch? [y/N]` until success or skip; then still assess local refs), diag-style report vs `origin/develop` (`ok`/`develop`/`behind-develop`/`pull`/`push`/`push-upstream`/`switch`/`manual`; fetch news appends ` - info` to the tag), then separate prompts per safe action (`y/N`; `pull` is `y`/`i`/`N`; orphan locals `p`/`d`/`N` with delete confirm, except same tip as develop / no unique commits — report only) — no shared confirm, develop only, no `branch -u`.
 
 Convention and layout: [scripts/bash_macros/README.md](scripts/bash_macros/README.md).
 
 ## Configured subproject extensions
 
-Targets registered in `importer.repos`. Details and usage live in each subproject; this section is the agent map only.
+Targets registered in `config/repos/importer.yaml`. Details and usage live in each subproject; this section is the agent map only.
 
 ### transporter
 
@@ -46,7 +46,7 @@ Docs: [src/transporter/README.md](src/transporter/README.md), [src/transporter/s
 After `importer notaura_ws`:
 
 - `notaura_ws_import_repos [docs|code|vendor|all|status]` — clone/update nested repos (same GitHub SSH Host list as `importer`).
-- `latex [path-to.tex|dir]` — after `notaura_ws_import_repos docs` (and `load_macros`); builds under `src/notaura_ws/docs/` (default: thesis `main.tex`) via Docker `texlive/texlive` or host `latexmk` / `pdflatex`.
+- `latex [path-to.tex|dir]` — after `notaura_ws_import_repos docs` (macro reloads automatically); builds under `src/notaura_ws/docs/` (default: thesis `main.tex`) via Docker `texlive/texlive` or host `latexmk` / `pdflatex`.
 
 Docs: [src/notaura_ws/README.md](src/notaura_ws/README.md), [src/notaura_ws/scripts/bash_macros/README.md](src/notaura_ws/scripts/bash_macros/README.md). Nested thesis macros: [src/notaura_ws/docs/notaura_thesis/README.md](src/notaura_ws/docs/notaura_thesis/README.md).
 

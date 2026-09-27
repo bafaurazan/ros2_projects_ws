@@ -88,7 +88,7 @@ Convention: each repo keeps `scripts/bash_macros/` with `launch/macros.bash` (de
 
 **Core macros** (this workspace): `build`, `cbuild`, `diag`, `load_macros`, `importer`.
 
-**Extensibility:** any repository under `src/` may ship a `scripts/bash_macros/` bundle. `load_macros` discovers and sources it; `diag` lists public macros grouped by repository. Targets for `importer` live in [`scripts/bash_macros/config/importer.repos`](scripts/bash_macros/config/importer.repos). Subproject-specific macros and docs stay in those repos — see [AGENTS.md](AGENTS.md) for currently configured extensions.
+**Extensibility:** any repository under `src/` may ship a `scripts/bash_macros/` bundle. `load_macros` discovers and sources it; `diag` lists public macros grouped by repository. Targets for `importer` live in [`scripts/bash_macros/config/repos/importer.yaml`](scripts/bash_macros/config/repos/importer.yaml). Subproject-specific macros and docs stay in those repos — see [AGENTS.md](AGENTS.md) for currently configured extensions.
 
 ROS `build` / `cbuild` need Distrobox on native Linux. Host helpers from imported subprojects work with `./scripts/setup.bash macros`.
 
