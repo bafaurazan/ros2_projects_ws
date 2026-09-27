@@ -252,6 +252,64 @@ diag::_print_macro_block() {
     echo
 }
 
+# Print one summary line, wrapping only at ", " so macro names stay intact.
+diag::_print_summary_line() {
+    local repo="$1"
+    local macros="$2"
+    local width prefix indent_str
+    local -a tokens=()
+    local token line sep candidate
+
+    width="$(diag::_get_terminal_width)"
+    # Reserve one column for the closing ']'.
+    if (( width > 1 )); then
+        width=$((width - 1))
+    fi
+    prefix="${repo} - ["
+    indent_str="$(printf '%*s' "${#prefix}" '')"
+
+    while [[ -n "$macros" ]]; do
+        if [[ "$macros" == *,\ * ]]; then
+            tokens+=("${macros%%, *}")
+            macros="${macros#*, }"
+        else
+            tokens+=("$macros")
+            macros=""
+        fi
+    done
+
+    line="$prefix"
+    sep=""
+    for token in "${tokens[@]}"; do
+        candidate="${line}${sep}${token}"
+        if [[ -n "$sep" ]] && (( ${#candidate} > width )); then
+            printf '%s\n' "${line},"
+            line="${indent_str}${token}"
+        else
+            line="$candidate"
+        fi
+        sep=", "
+    done
+    printf '%s]\n' "$line"
+}
+
+# Print compact inventory collected during _print_macros (git_ws-style).
+diag::_print_macros_summary() {
+    local -n _repos_ref=$1
+    local -n _macros_ref=$2
+    local i
+
+    (( ${#_repos_ref[@]} > 0 )) || return 0
+
+    echo
+    echo "===="
+    echo "summary"
+    echo "===="
+    for i in "${!_repos_ref[@]}"; do
+        diag::_print_summary_line "${_repos_ref[$i]}" "${_macros_ref[$i]}"
+    done
+}
+
 diag::_print_macros() {
     echo "=== Macros ==="
 
@@ -263,6 +321,9 @@ diag::_print_macros() {
     local src repo fn description
     local found=0
     local launch_file
+    local repo_macros=""
+    local -a summary_repos=()
+    local -a summary_macros=()
 
     while IFS= read -r src; do
         [[ -n "$src" ]] || continue
@@ -271,16 +332,29 @@ diag::_print_macros() {
         echo
         echo "[$repo]"
         launch_file="${src}/launch/macros.bash"
+        repo_macros=""
         while IFS=$'\t' read -r fn description; do
             [[ -n "$fn" ]] || continue
             if ! declare -F "$fn" >/dev/null 2>&1; then
                 echo "diag: registry macro '${fn}' not defined in src/" >&2
             fi
             diag::_print_macro_block "$fn" "$description"
+            if [[ -n "$repo_macros" ]]; then
+                repo_macros+=", ${fn}"
+            else
+                repo_macros="$fn"
+            fi
         done < <(diag::_parse_macro_registry "$launch_file")
+        if [[ -n "$repo_macros" ]]; then
+            summary_repos+=("$repo")
+            summary_macros+=("$repo_macros")
+        fi
     done < <(load::_find_sources "${ROS2_PROJECTS_WS_ROOT}")
 
     if [[ "$found" -eq 0 ]]; then
         echo "No scripts/bash_macros/ bundles found."
+        return 0
     fi
+
+    diag::_print_macros_summary summary_repos summary_macros
 }

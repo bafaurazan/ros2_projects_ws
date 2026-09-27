@@ -8,7 +8,8 @@
 #   Distro-aware colcon build into ./build_ws/build_<ROS_DISTRO>/,
 #   then source the install overlay.
 # macro diag
-#   Print system/tools/env info, verify env setup, and list macros.
+#   Print system/tools/env info, verify env setup, and list macros
+#   (Macros section ends with a summary: repo - [macros…]).
 # macro load_macros
 #   Rediscover scripts/bash_macros/ bundles and re-source launch/macros.bash.
 # macro importer

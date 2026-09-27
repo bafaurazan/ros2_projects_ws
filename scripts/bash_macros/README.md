@@ -61,7 +61,7 @@ After `load_macros`, public macros get a compspec. First-word TAB prefers those 
 
 - `build [colcon args...]` — rosdep / apt / pip, then `cbuild`. Requires ROS 2 toolchain (Distrobox on native Linux).
 - `cbuild [colcon args...]` — rediscovers macros (`load_macros`), then `colcon build` into `./build_ws/`, then source the install overlay (skipped if colcon fails).
-- `diag` — environment checks and the public macro list (from launch registries).
+- `diag` — environment checks and the public macro list (from launch registries); the Macros section ends with a `summary` block (`repo - [macros…]`).
 - `load_macros` — rediscover `scripts/bash_macros/` bundles and re-source `launch/macros.bash`.
 - `importer <name>` — clone a target from `config/importer.repos` on first use; ignores the command if already present. Tries `github.com`, then any `Host` aliases in `~/.ssh/config` whose `HostName` is `github.com` (falls back to `github.com` if that file is missing).
 - `git_ws [-r] <path> [path ...]` — discover git repos at the given paths (`-r`: recursively under them, skips `build` / `build_ws` / `install` / `log` / `trash`; without `-r` only paths that are themselves git roots), always also checks the `ros2_projects_ws` repo (`ROS2_PROJECTS_WS_ROOT`), `git fetch --prune` (on failure: print error and `Retry fetch? [y/N]` until success or skip; then still assess local refs), then a diag-style report per repo: current branch, ahead/behind vs `origin/develop`, upstream sync, remote branches vs develop, and `local without remote`. Tags: `ok` / `develop` / `behind-develop` / `pull` / `push` / `push-upstream` / `switch` / `manual` (`develop` = sync on `develop`; `behind-develop` = sync with upstream but HEAD behind `origin/develop`; `switch` = no remote and HEAD is a strict ancestor already in `origin/develop` after merge — not the same tip with no unique commits; `manual` = dirty, diverged, no develop, missing tracking when remote exists, etc.; fetch news appends ` - info` to the tag, e.g. `ok - info`). Safe actions use per-prompt `y/N` (`pull` is `y`/`i`/`N`: `i` shows incoming `git log` + `git diff` vs upstream); orphan locals get `p`/`d`/`N` except when tip equals `origin/develop` (no unique commits — report only, no delete/push prompt; `d` deletes local only after a second `Are you sure...? [y/N]`; unmerged / squash use `branch -D`). Ends with a `summary` of repo basename → `[tag]` (re-assessed after a successful apply). Integration base is `develop` only (not `main`); does not run `git branch -u`.
@@ -75,7 +75,7 @@ The parent workspace does not hardcode which macros live under `src/`. After set
 1. `load_macros` finds every `scripts/bash_macros/` under the workspace root and under `src/` (nested repos included; build/install/log/`.git` trees skipped).
 2. Each bundle’s `launch/macros.bash` registers public macros in the `@macros-begin` … `@macros-end` block and sources root `lib/bundle_load.bash`.
 3. `bundle_load` sources that bundle’s `include/*_helpers.bash` then `src/*.bash`.
-4. `diag` lists public macros grouped by repository (descriptions come from the registry).
+4. `diag` lists public macros grouped by repository (descriptions come from the registry), then a compact `summary` (`repo - [macros…]`).
 
 Document each subproject’s macros in that repo’s own `README.md` / `scripts/bash_macros/README.md`. Currently configured `importer` targets and agent pointers: [AGENTS.md](../../AGENTS.md).
 
