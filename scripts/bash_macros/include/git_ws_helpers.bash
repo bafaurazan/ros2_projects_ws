@@ -319,6 +319,26 @@ git_ws::_get_vs_develop_text() {
     printf 'ahead %s, behind %s\n' "$ahead" "$behind"
 }
 
+# True if any origin remote (except develop/HEAD) has commits not in origin/develop.
+git_ws::_has_remote_ahead_of_develop() {
+    local dir="$1"
+    local ref short ahead
+
+    git_ws::_has_develop "$dir" || return 1
+
+    while IFS= read -r ref; do
+        [[ -n "$ref" ]] || continue
+        short="${ref#refs/remotes/}"
+        [[ "$short" == "origin/develop" || "$short" == "origin/HEAD" ]] && continue
+        ahead="$(git -C "$dir" rev-list --count "refs/remotes/origin/develop..${ref}" 2>/dev/null || echo 0)"
+        if [[ "$ahead" =~ ^[0-9]+$ && "$ahead" -gt 0 ]]; then
+            return 0
+        fi
+    done < <(git -C "$dir" for-each-ref --format='%(refname)' refs/remotes/origin/ 2>/dev/null | sort)
+
+    return 1
+}
+
 # True when branch.<name>.remote/.merge are set but the remote-tracking ref is gone
 # (typical after PR merge + remote branch delete + fetch --prune, incl. squash).
 git_ws::_has_gone_upstream() {
@@ -338,8 +358,10 @@ git_ws::_has_gone_upstream() {
 #   _gw_branch _gw_upstream _gw_ahead _gw_behind
 #   _gw_dev_ahead _gw_dev_behind _gw_has_develop
 #   _gw_action _gw_reason _gw_fetch_ok _gw_fetch_out _gw_switch_target
+#   _gw_develop_behind
 # Actions: ok|develop|behind-develop|pull|push|push-upstream|switch|manual
-# Display may append " - info" when fetch printed news (see _get_action_label).
+# Display may append " - behind" (synced develop, remotes ahead of develop) and/or
+# " - info" when fetch printed news (see _get_action_label).
 git_ws::_fetch_and_assess_repo() {
     local dir="$1"
     local fetch_status=0
@@ -357,6 +379,7 @@ git_ws::_fetch_and_assess_repo() {
     _gw_fetch_ok=0
     _gw_fetch_out=""
     _gw_switch_target=""
+    _gw_develop_behind=0
 
     display="$(git_ws::_get_display_path "$dir")"
     # Fail unreachable remotes instead of hanging forever. Start at 5s, +5s per
@@ -421,6 +444,7 @@ git_ws::_assess_repo() {
     _gw_action="manual"
     _gw_reason=""
     _gw_switch_target=""
+    _gw_develop_behind=0
 
     if git_ws::_has_develop "$dir"; then
         _gw_has_develop=1
@@ -475,6 +499,9 @@ git_ws::_assess_repo() {
             _gw_action="behind-develop"
         elif [[ "$_gw_branch" == "develop" ]]; then
             _gw_action="develop"
+            if git_ws::_has_remote_ahead_of_develop "$dir"; then
+                _gw_develop_behind=1
+            fi
         else
             _gw_action="ok"
         fi
@@ -587,13 +614,16 @@ git_ws::_print_orphan_locals() {
     done < <(git -C "$dir" for-each-ref --format='%(refname:short)' refs/heads/ 2>/dev/null | sort)
 }
 
-# Display label for _gw_action; appends " - info" when fetch printed news.
+# Display label for _gw_action; may append " - behind" and/or " - info".
 git_ws::_get_action_label() {
-    if [[ -n "${_gw_fetch_out:-}" ]]; then
-        printf '%s - info\n' "$_gw_action"
-    else
-        printf '%s\n' "$_gw_action"
+    local label="$_gw_action"
+    if [[ "${_gw_develop_behind:-0}" -eq 1 ]]; then
+        label="${label} - behind"
     fi
+    if [[ -n "${_gw_fetch_out:-}" ]]; then
+        label="${label} - info"
+    fi
+    printf '%s\n' "$label"
 }
 
 git_ws::_print_repo_report() {

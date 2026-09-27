@@ -24,7 +24,8 @@
 #   (on failure y/N retry until success or skip; then still assess local refs),
 #   diag-style report per repo (branch, vs origin/develop, upstream,
 #   remotes, local without remote), tags ok/develop/behind-develop/pull/push/push-upstream/
-#   switch/manual (fetch news appends " - info" to the tag). Separate y/N per safe action (pull: y/i/N; i = incoming
+#   switch/manual (synced develop with remotes ahead of develop appends " - behind";
+#   fetch news appends " - info" to the tag). Separate y/N per safe action (pull: y/i/N; i = incoming
 #   diff); orphan locals get p/d/N (except same tip as develop / no unique
 #   commits — report only; d asks Are you sure? before local delete).
 #   Without -r only paths that are themselves git roots;
