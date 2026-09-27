@@ -1,6 +1,6 @@
 {
   "git.autoRepositoryDetection": true,
-  "git.repositoryScanMaxDepth": 12,
+  "git.repositoryScanMaxDepth": -1,
   "git.openRepositoryInParentFolders": "never",
   "git.repositoryScanIgnoredFolders": [
     "node_modules",
